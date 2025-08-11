@@ -1,0 +1,124 @@
+from langchain_openai import ChatOpenAI
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.output_parsers import StrOutputParser
+from pathlib import Path
+
+"""
+Canonical Mapper 에서 알아낸 UI element에 대해서 현재 화면 혹은 
+UI element에서부터 클릭하는 것들의 경로를 알아낼 수 있는 쿼리를 생성
+
+update_last_clicked_ui 사용 시 UI Element를 시작점으로 사용
+update_last_clicked_screen 사용 시 Screen을 시작점으로 사용
+generate 을 통해 호출
+"""
+
+class LLMCypherGenerator:
+    def __init__(self, graph_path, model=None, initial_last_clicked_ui=None, initial_screen=None):
+        self.graph_path = graph_path
+        self.llm = model or ChatOpenAI(model="gpt-4o")
+        self.prompt_template = ChatPromptTemplate.from_template(self._build_prompt_template())
+        self.output_parser = StrOutputParser()
+        self.last_clicked_ui = initial_last_clicked_ui
+        self.current_screen = initial_screen
+        self.isScreen = False
+
+    def _build_prompt_template(self):
+        return """You are an expert in Neo4j Cypher query generation.
+        
+Graph Schema:
+{graph_structure}
+
+Goal:
+The user wants to find the (x, y) coordinates of a UIElement node named "{target_ui}", starting from {start_point_description}.
+
+Task:
+You are an expert in writing Neo4j Cypher queries for UI navigation graphs. Based on the following conditions, you will:
+
+1. Think step-by-step and explain how to determine the correct Cypher query to get the coordinates of UIElements involved in the path.
+2. Then output the final Cypher query in a code block.
+
+Rules:
+
+- First, write a section titled "추론:" in Korean that clearly explains your reasoning process about how the query will be formed, what assumptions are made, and how directionality and relationships are handled.
+- Then, write a section titled "결과:" that contains the final Cypher query.
+- The Cypher query should:
+  - Find the shortest path from the given screen or UIElement to the target UIElement
+  - Traverse via only the following relationships (directional, forward only): `[:CONTAINS]`, `[:TRIGGERS]`, `[:LEADS_TO]`
+  - After `UNWIND`, you must use `WITH n` before using `WHERE` (Neo4j requires this)
+  - Only return UIElement nodes that have both `x` and `y` coordinates (using `n.x IS NOT NULL AND n.y IS NOT NULL`)
+  - Return results in path order using `apoc.coll.indexOf(nodes(path), n)`
+  - Return: `n.name AS name, n.x AS x, n.y AS y`
+
+Only return this output format:
+
+추론:
+(너의 추론 과정)
+
+결과:
+```cypher
+-- 최종 Cypher 쿼리 --
+    """
+
+    def _load_text(self, path: str) -> str:
+        return Path(path).read_text(encoding='utf-8')
+
+    def update_last_clicked_ui(self, ui_element: dict | None):
+        self.last_clicked_ui = ui_element['name']
+        self.isScreen = False
+
+    def update_last_clicked_screen(self, screen_name):        
+        self.current_screen = screen_name
+        self.isScreen = True
+        self.last_clicked_ui = None
+
+    def generate(self, target_ui: str, previous_failed_queries=None) -> str:
+        graph_structure = self._load_text(self.graph_path)
+
+        current_screen = "Home"
+        if self.current_screen != None:
+            current_screen = self.current_screen
+        start_point_description = ""
+        start_node_name = ""
+        used_UIElement = self.last_clicked_ui is not None and not self.isScreen
+
+        if self.last_clicked_ui is not None and self.isScreen == False:
+            start_point_description = f"the previously clicked UI element\"{self.last_clicked_ui}\" (consider it as a UIElement node in the graph)"
+            start_node_name = self.last_clicked_ui
+            used_UIElement = True
+        else:
+            start_point_description = f"the screen \"{current_screen}\""
+            start_node_name = current_screen
+            used_UIElement = False
+
+        print(f"generate() - current_screen: {self.current_screen}, isScreen: {self.isScreen}, last_clicked_ui: {self.last_clicked_ui}")
+
+        context = {
+            "graph_structure": graph_structure.strip(),
+            "target_ui": target_ui.strip(),
+            #"current_screen": current_screen.strip()
+            "start_point_description": start_point_description,
+        }
+
+        # 이전 실패 쿼리를 context에 추가할 수도 있음
+        if previous_failed_queries:
+            context["graph_structure"] += (
+                f"\n\nPrevious failed queries:\n" +
+                "\n".join(previous_failed_queries)
+            )
+        else:
+            start_node_label = "UIElement" if used_UIElement else "Screen"
+
+            initialCypher = f"""
+MATCH (start {{name: "{start_node_name}"}})
+MATCH (target:UIElement {{name: "{target_ui}"}})
+MATCH path = shortestPath((start)-[:CONTAINS|TRIGGERS|LEADS_TO*]->(target))
+UNWIND nodes(path) AS n
+WITH n, path
+WHERE n: UIElement AND n.x IS NOT NULL AND n.y IS NOT NULL
+RETURN n.name AS name, n.x AS x, n.y AS y
+ORDER BY apoc.coll.indexOf(nodes(path), n)
+"""
+            return initialCypher
+
+        chain = self.prompt_template | self.llm | self.output_parser
+        return chain.invoke(context).strip()

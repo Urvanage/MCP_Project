@@ -1,0 +1,371 @@
+{
+    "Home": {
+        "type": "Screen",
+        "aliases": [
+            "초기화면",
+            "시작화면"
+        ]
+    },
+    "Program": {
+        "type": "Screen",
+        "aliases": [
+            "프로그램화면"
+        ]
+    },
+    "Run": {
+        "type": "Screen",
+        "aliases": [
+            "실행화면"
+        ]
+    },
+    "Settings": {
+        "type": "Screen",
+        "aliases": [
+            "설정화면"
+        ]
+    },
+    "Move": {
+        "type": "Screen",
+        "aliases": [
+            "이동화면"
+        ]
+    },
+    "System": {
+        "type": "Screen",
+        "aliases": [
+            "시스템화면"
+        ]
+    },
+    "IPInputKeyboard": {
+        "type": "Screen",
+        "aliases": [
+            "IP 주소 입력 키보드",
+            "IP 키보드"
+        ]
+    },
+    "WiFiPopup": {
+        "type": "Screen",
+        "aliases": [
+            "Wifi 팝업 메뉴"
+        ]
+    },
+    "USBPopup": {
+        "type": "Screen",
+        "aliases": [
+            "USB 팝업 메뉴"
+        ]
+    },
+    "Connection Icon": {
+        "type": "UIElement",
+        "aliases": [
+            "연결 아이콘"
+        ]
+    },
+    "Wi-Fi Option": {
+        "type": "UIElement",
+        "aliases": [
+            "Wi-Fi로 연결하기",
+            "Wi-Fi 버튼",
+            "Wi-Fi로 연결"
+        ]
+    },
+    "USB Option": {
+        "type": "UIElement",
+        "aliases": [
+            "USB로 연결하기",
+            "USB 버튼"
+        ]
+    },
+    "CloseBtn": {
+        "type": "UIElement",
+        "aliases": [
+            "Wifi 팝업 닫기",
+            "USB 팝업 닫기",
+            "팝업 닫기 버튼"
+        ]
+    },
+    "ConnectBtn": {
+        "type": "UIElement",
+        "aliases": [
+            "Wifi 연결 버튼"
+        ]
+    },
+    "USBConnectBtn": {
+        "type": "UIElement",
+        "aliases": [
+            "USB 연결 버튼"
+        ]
+    },
+    "IPInputField": {
+        "type": "UIElement",
+        "aliases": [
+            "IP 입력 필드"
+        ]
+    },
+    "ip_key_0": {
+        "type": "UIElement",
+        "aliases": [
+            "IP 0 입력 버튼",
+            "0 버튼"
+        ]
+    },
+    "ip_key_1": {
+        "type": "UIElement",
+        "aliases": [
+            "IP 1 입력 버튼",
+            "1 버튼"
+        ]
+    },
+    "ip_key_2": {
+        "type": "UIElement",
+        "aliases": [
+            "IP 2 입력 버튼",
+            "2 버튼"
+        ]
+    },
+    "ip_key_3": {
+        "type": "UIElement",
+        "aliases": [
+            "IP 3 입력 버튼",
+            "3 버튼"
+        ]
+    },
+    "ip_key_4": {
+        "type": "UIElement",
+        "aliases": [
+            "IP 4 입력 버튼",
+            "4 버튼"
+        ]
+    },
+    "ip_key_5": {
+        "type": "UIElement",
+        "aliases": [
+            "IP 5 입력 버튼",
+            "5 버튼"
+        ]
+    },
+    "ip_key_6": {
+        "type": "UIElement",
+        "aliases": [
+            "IP 6 입력 버튼",
+            "6 버튼"
+        ]
+    },
+    "ip_key_7": {
+        "type": "UIElement",
+        "aliases": [
+            "IP 7 입력 버튼",
+            "7 버튼"
+        ]
+    },
+    "ip_key_8": {
+        "type": "UIElement",
+        "aliases": [
+            "IP 8 입력 버튼",
+            "8 버튼"
+        ]
+    },
+    "ip_key_9": {
+        "type": "UIElement",
+        "aliases": [
+            "IP 9 입력 버튼",
+            "9 버튼"
+        ]
+    },
+    "ip_key_dot": {
+        "type": "UIElement",
+        "aliases": [
+            "IP . 입력 버튼",
+            ". 버튼"
+        ]
+    },
+    "ip_key_delete": {
+        "type": "UIElement",
+        "aliases": [
+            "IP 삭제 버튼",
+            "삭제 버튼"
+        ]
+    },
+    "ip_key_confirm": {
+        "type": "UIElement",
+        "aliases": [
+            "IP 확인 버튼",
+            "완료 버튼",
+            "확인 버튼"
+        ]
+    },
+    "HomeProgramBtn": {
+        "type": "UIElement",
+        "aliases": [
+            "시작화면에서 프로그램 버튼",
+            "초기화면에서 프로그램 버튼"
+        ]
+    },
+    "HomeRunBtn": {
+        "type": "UIElement",
+        "aliases": [
+            "시작화면에서 실행 버튼",
+            "초기화면에서 실행 버튼"
+        ]
+    },
+    "HomeSettingsBtn": {
+        "type": "UIElement",
+        "aliases": [
+            "시작화면에서 설정 버튼",
+            "초기화면에서 설정 버튼"
+        ]
+    },
+    "SystemBtn": {
+        "type": "UIElement",
+        "aliases": [
+            "시스템 버튼"
+        ]
+    },
+    "MoveBtn": {
+        "type": "UIElement",
+        "aliases": [
+            "이동 버튼"
+        ]
+    },
+    "ProgramBtn": {
+        "type": "UIElement",
+        "aliases": [
+            "시작화면을 제외한 모든 화면에서 누를 수 있는 프로그램 버튼",
+            "초기화면을 제외한 모든 화면에서 누를 수 있는 프로그램 버튼"
+        ]
+    },
+    "RunBtn": {
+        "type": "UIElement",
+        "aliases": [
+            "시작화면을 제외한 모든 화면에서 누를 수 있는 실행 버튼",
+            "초기화면을 제외한 모든 화면에서 누를 수 있는 실행 버튼"
+        ]
+    },
+    "SettingsBtn": {
+        "type": "UIElement",
+        "aliases": [
+            "시작화면을 제외한 모든 화면에서 누를 수 있는 설정 버튼",
+            "초기화면을 제외한 모든 화면에서 누를 수 있는 설정 버튼"
+        ]
+    },
+    "VirtualBtn": {
+        "type": "UIElement",
+        "aliases": [
+            "시뮬레이션 모드 버튼"
+        ]
+    },
+    "RealBtn": {
+        "type": "UIElement",
+        "aliases": [
+            "실제 모드 버튼"
+        ]
+    },
+    "HomePosition": {
+        "type": "UIElement",
+        "aliases": [
+            "홈 위치 버튼",
+            "홈 위치",
+            "홈 위치로 움직이도록 설정하는 버튼"
+        ]
+    },
+    "ZeroPosition": {
+        "type": "UIElement",
+        "aliases": [
+            "영 위치 버튼",
+            "영 위치로 이동하도록 설정하는 버튼"
+        ]
+    },
+    "PackagingPosition": {
+        "type": "UIElement",
+        "aliases": [
+            "패키징 위치 버튼",
+            "패키징 위치로 이동하도록 설정하는 버튼"
+        ]
+    },
+    "HoldToMoveBtn": {
+        "type": "UIElement",
+        "aliases": [
+            "누르는동안 입력위치로 이동 버튼",
+            "누르는동안 입력위치로 이동"
+        ]
+    },
+    "JogSpeedLevel1Btn": {
+        "type": "UIElement",
+        "aliases": [
+            "조그 속도 레벨 1 버튼",
+            "조그 속도 레벨 1"
+        ]
+    },
+    "JogSpeedLevel2Btn": {
+        "type": "UIElement",
+        "aliases": [
+            "조그 속도 레벨 2 버튼",
+            "조그 속도 레벨 2"
+        ]
+    },
+    "JogSpeedLevel3Btn": {
+        "type": "UIElement",
+        "aliases": [
+            "조그 속도 레벨 3",
+            "조그 속도 레벨 3 버튼"
+        ]
+    },
+    "PresetMove": {
+        "type": "Screen",
+        "aliases": [
+            "지정위치 이동 화면"
+        ]
+    },
+    "PresetMoveBtn": {
+        "type": "UIElement",
+        "aliases": [
+            "지정위치 이동 화면 버튼"
+        ]
+    },
+    "JointMoveBtn": {
+        "type": "UIElement",
+        "aliases": [
+            "관절위치 이동 버튼"
+        ]
+    },
+    "TaskRefBtn": {
+        "type": "UIElement",
+        "aliases": [
+            "작업위치(참조) 버튼",
+            "참조좌표계 버튼"
+        ]
+    },
+    "TaskToolBtn": {
+        "type": "UIElement",
+        "aliases": [
+            "작업위치(툴) 버튼",
+            "툴좌표계 버튼"
+        ]
+    },
+    "TaskToolMove": {
+        "type": "Screen",
+        "aliases": [
+            "작업위치(툴) 화면",
+            "툴좌표계 화면"
+        ]
+    },
+    "TaskRefMove": {
+        "type": "Screen",
+        "aliases": [
+            "작업위치(참조) 화면",
+            "참조좌표계 화면"
+        ]
+    },
+    "JointMove": {
+        "type": "Screen",
+        "aliases": [
+            "관절위치 이동 화면"
+        ]
+    },
+    "test": {
+        "type": "UIElement",
+        "aliases": [
+            "test Element"
+        ]
+    }
+}

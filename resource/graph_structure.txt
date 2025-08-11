@@ -1,0 +1,9 @@
+Node Types
+- Screen: 하나의 화면을 의미. 예: "Home", "WiFiPopup"
+- UIElement: 클릭 가능한 버튼, 아이콘 등. 예: "Connection Icon", "Wi-Fi Option"
+- Action: 클릭, 스크롤 등 UIElement가 트리거하는 사용자 행위
+
+Relationship Types
+- (:Screen)-[:CONTAINS]->(:UIElement): 특정 화면이 UI 요소 포함
+- (:UIElement)-[:TRIGGERS]->(:Action): UI 요소 클릭 시 액션 실행
+- (:Action)-[:LEADS_TO]->(:Screen): 액션 실행 시 화면 이동
