@@ -63,7 +63,7 @@ class StepExecutor:
             self.generator.update_last_clicked_screen(start_point)
 
     def return_to_testScreen(self, testScreen):
-        print("RETURN TO TESTSCREEN")
+        #print("RETURN TO TESTSCREEN")
         finished_place = self.start_point.get("name")
         checkUIElementQuery = f"""
         MATCH (n {{name: "{finished_place}"}})
@@ -74,7 +74,7 @@ class StepExecutor:
         query_result1, error = self.neo4j.execute_cypher()
         query_result1 = query_result1[0][0]
 
-        print(finished_place," ", query_result1)
+        #print(finished_place," ", query_result1)
 
         if query_result1 == "UIElement":
             checkContainQuery = f"""
@@ -86,6 +86,7 @@ class StepExecutor:
             query_result2, error = self.neo4j.execute_cypher()
             
             if query_result2 == True:
+                self.tap_executor.tap_middle()
                 return
         
         stepFin_Cypher = f"""
@@ -103,10 +104,12 @@ class StepExecutor:
 
         tap_result = self.tap_executor.tap(query_result3)
         if tap_result == False:
+                self.tap_executor.tap_middle()
                 return
 
         self.start_point = tap_result
         screen_name = self._update_start_point_from_ui(tap_result)
+        self.tap_executor.tap_middle()
         
     def generate_step0(self, fromScreen, toScreen):
         toCheck = ""
@@ -121,9 +124,9 @@ class StepExecutor:
             subprocess.run(cmd, shell=True)
             print("==== Step 0: Move to Initial Screen ====")
             print("==== Completed ====\n\n")
-            time.sleep(6)
+            time.sleep(8)
             self.start_point = {
-                    "name": toScreen,
+                    "name": "Home",
                     "x": None,
                     "y": None
             }
@@ -159,7 +162,7 @@ class StepExecutor:
             self.tap_executor = TapExecutor()
             tap_result = self.tap_executor.tap(query_result)
             log = self.monitor.search("StartFragment :")
-            if toCheck in log:
+            if log and toCheck in log:
                 print(f"==== Step 0: Move to {toScreen} Screen ====")
                 print("==== Completed ====")
 
@@ -175,6 +178,7 @@ class StepExecutor:
                     )
                 else:
                     self.generator.update_last_clicked_screen(toScreen)
+            
             
     def get_startPoint(self):
         startPoint = self.start_point
@@ -194,13 +198,16 @@ class StepExecutor:
         print("\n==== Observation ====")
         time.sleep(10)
         
+        #print(self.monitor.get_logs())
         logs = []
         logs.append(self.monitor.search("[Msg]"))
         logs.append(self.monitor.search("Toast.Show"))
+        logs.append(self.monitor.search("StartFragment :"))
         logs = [str(log) for log in logs if log is not None]
+        #print(logs)
         
         analyzer = self.step_analyzer
-        analyzer.analyze_observation_mode(self.step, logs)
+        analyzer.analyze_observation_mode(self.step, logs=logs)
 
         """
         if obs_config["method"] == "log":
@@ -276,6 +283,7 @@ class StepExecutor:
     async def run_step(self, step: str):
         self.step = step
         print(f"From [run_step] | Starting Point : {self.start_point}")
+        #print(self.monitor.get_logs())
 
         canonical_place = self.start_point.get("name")
         if self.isScreen == False:

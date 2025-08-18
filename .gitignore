@@ -3,10 +3,6 @@ __pycache__
 check/
 notNow/
 adb_commands.txt
-base_requirements.txt
-common_requirements.txt
-current_screen.png
-nm_env_requirements.txt
 requirements.txt
 robot_control.py
 screen.png

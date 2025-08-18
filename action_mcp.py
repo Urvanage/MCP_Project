@@ -20,6 +20,8 @@ import cv2
 
 import logging
 
+load_dotenv()
+
 uri = os.getenv("NEO4J_URI")
 user= os.getenv("NEO4J_USER")
 password=os.getenv("NEO4J_PASSWORD")
@@ -268,6 +270,8 @@ You have access to the following tools:
 - check_screen_type(screen): Check if the screen requires OCR and get bounding box if so.
 - screen_description(screen): Retrieves the specific description or initial instructions for a given screen from the Neo4j graph database.
 - perform_ocr(region): Perform OCR on a specified region.
+
+Dont forget the press the dot when you press the IP key.
 
 Instructions:
 1. **Always start by calling `screen_description` with the current screen name** to get any additional instructions or context.

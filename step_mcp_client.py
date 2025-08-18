@@ -16,6 +16,7 @@ import os
 
 import asyncio
 
+from module.image_comparator import ImageComparator
 from module.step_executor import StepExecutor
 
 import csv
@@ -182,6 +183,13 @@ async def run():
             ###########################################
             
             user_input = input("질문을 입력하세요: ")
+            input_list = user_input.split(',')
+            
+            start_point = ImageComparator().check_current_screen()
+
+            user_input += f"현재 화면은 {start_point}입니다."
+            
+
             prompts = await load_mcp_prompt(
                 session, "default_prompt", arguments={"message": user_input}
             )
@@ -194,8 +202,9 @@ async def run():
             # JSON 블록 탐색: 완화된 정규식으로 배열 전체 추출
             #match = re.search(r"```json\s*(\[.*?\])\s*```", content, re.DOTALL)
 
-            test_screen = change_screen_name("이동") # 이동
-            start_point = "Home" # Move
+            test_screen = change_screen_name(input_list[0]) # 이동
+            #start_point = "Home" # Move
+            #print(start_point)
 
             stepExecutor = StepExecutor(user_input=user_input)
             stepExecutor.setStartScreen(start_point)
@@ -220,12 +229,11 @@ async def run():
                     if DEV_MODE:
                         steps = await feedback_loop(user_input, steps, agent)
                     
-
-
-                    stepExecutor.setMonitorTime()
+                    #stepExecutor.setMonitorTime()
 
                     if start_point != test_screen:
                         stepExecutor.generate_step0(start_point, test_screen)
+                        stepExecutor.setStartScreen(test_screen)
 
                     action_type=""
                     for i, step in enumerate(steps, 1):

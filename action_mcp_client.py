@@ -16,8 +16,67 @@ import os
 
 import asyncio
 
+from uuid import uuid4
+from langchain_core.messages import AIMessage
+from langchain_core.runnables import RunnableConfig
+from typing import Any
+
+def _text_or_raw(content: Any) -> Any:
+    """Responses 블록에서 text만 모아 합치되, 없으면 원본 content 그대로 반환."""
+    # 리스트: {'type':'text','text':...} 블록 모으기
+    if isinstance(content, list):
+        texts = [
+            b["text"]
+            for b in content
+            if isinstance(b, dict) and b.get("type") == "text" and isinstance(b.get("text"), str)
+        ]
+        return "\n".join(texts).strip() if texts else content
+ 
+    # 딕셔너리 한 개: text 키가 있으면 그걸, 없으면 원본
+    if isinstance(content, dict):
+        if content.get("type") == "text" and isinstance(content.get("text"), str):
+            return content["text"].strip()
+        if isinstance(content.get("text"), str):
+            return content["text"].strip()
+        if isinstance(content.get("content"), str):
+            return content["content"].strip()
+        return content
+ 
+    # 문자열/기타 타입
+    return content if content is not None else ""
+ 
+class TextLLM:
+    def __init__(self, base_llm):
+        self.base = base_llm
+
+    def bind_tools(self, tools):
+        return self.base.bind_tools(tools)
+
+    def invoke(self, messages, config=None):
+        res = self.base.invoke(messages, config=config)
+        return _text_or_raw(getattr(res, "content", res))
+
+    async def ainvoke(self, messages, config=None):
+        res = await self.base.ainvoke(messages, config=config)
+        return _text_or_raw(getattr(res, "content", res))
+
+
 load_dotenv()
-os.getenv("OPENAI_API_KEY")
+openAPI = os.getenv("OPENAI_API_KEY")
+
+"""
+llm = ChatOpenAI(
+    model="gpt-5",
+    use_responses_api=True,
+    output_version="responses/v1",
+    extra_body={
+        "text":{"verbosity":"low"},
+        "reasoning": {"effort": "low"},
+    },
+    api_key = openAPI
+)
+model = TextLLM(llm)
+"""
 
 model = ChatOpenAI(model="gpt-4o")
 
@@ -28,11 +87,7 @@ server_params = StdioServerParameters(
     stderr=None
 )
 
-# action_mcp_client.py
-
 import asyncio
-# ... (기존 import 문) ...
-
 
 async def run_action_agent(screen_name: str, user_goal: str):
     print("[Client] Starting run_action_agent...")
@@ -56,6 +111,9 @@ async def run_action_agent(screen_name: str, user_goal: str):
             try:
                 check_response = await asyncio.wait_for(agent.ainvoke({"messages": action_data_check_prompt}), timeout=60)
                 check_content = check_response["messages"][-1].content.strip()
+                #check_ai_msg = check_response["messages"][-1]
+                #check_content = _text_or_raw(check_ai_msg.content)  # 문자열로 변환
+                #match = re.search(r"\{.*?\}", check_content)
                 match = re.search(r"\{.*?\}", check_content)
                 
                 if match:
@@ -114,6 +172,7 @@ async def run_action_agent(screen_name: str, user_goal: str):
                     print(f"[Client] Agent main goal invoked (Iteration {i+1}). Processing response.")
 
                     llm_ans = response["messages"][-1].content.strip()
+                    #llm_ans = response["messages"][-1]
                     print("==== AGENT RESPONSE (Iteration {}) ====".format(i+1))
                     print(llm_ans)
                     print("====================================")
@@ -129,6 +188,7 @@ async def run_action_agent(screen_name: str, user_goal: str):
                     for message in reversed(response['messages']):
                         if hasattr(message, 'name') and message.name == 'click_ui':
                             last_tool_message_content = message.content
+                            #last_tool_message_content = message
                             start_index = last_tool_message_content.find("Tapping ") + len("Tapping ")
                             end_index = last_tool_message_content.find(" at (")
                             if start_index != -1 and end_index != -1:
@@ -161,7 +221,7 @@ async def run_action_agent(screen_name: str, user_goal: str):
             return current_ui_name_tapped # 마지막으로 탭한 UI 요소를 반환
         
 
-#asyncio.run(run_action_agent("IPInputKeyboard", "Enter '192.168.0.74' in the IP input field."))
+#asyncio.run(run_action_agent("IPInputKeyboard", "Enter '192.168.0.89' in the IP input field."))
 
 
 '''

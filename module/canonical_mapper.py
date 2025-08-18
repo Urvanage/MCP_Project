@@ -45,7 +45,7 @@ For action_type:
 - If the step involves clicking, tapping, or touching a UI element, use "tap".
 - If the step involves simply observing or verifying changes in UI elements without interaction, use "observation".
 - For all other types of user interactions (e.g., inputting text using keyboard, generating program), generate an appropriate action_type freely.
-- 
+- If you are in USEPopup Screen and you are looking for Connect button, the answer is USBConnectBtn
 
 Return your answer in JSON format, like this:
 {{

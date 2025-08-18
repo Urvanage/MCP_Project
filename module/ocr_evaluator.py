@@ -16,88 +16,6 @@ class OCREvaluator:
     def __init__(self):
         pass
 
-    def check_system_menu_ocr(self):
-        subprocess.run("adb shell screencap -p /sdcard/screen.png", shell=True)
-        subprocess.run(f"adb pull /sdcard/screen.png screen.png", shell=True)
-        
-        image = Image.open("screen.png")
-        cropped_img = image.crop((10,105,300,875))
-
-        text = pytesseract.image_to_string(cropped_img, lang='kor')
-        if "엔드툴" in text:
-            subprocess.run("adb shell input tap 165 130")
-            subprocess.run("adb shell screencap -p /sdcard/screen.png", shell=True)
-            subprocess.run(f"adb pull /sdcard/screen.png screen.png", shell=True)
-            image = Image.open("screen.png")
-            cropped_img = image.crop((10,105,300,875))
-
-            text = pytesseract.image_to_string(cropped_img, lang='kor')
-        if "네트워크" in text:
-            subprocess.run("adb shell input tap 165 195")
-            subprocess.run("adb shell screencap -p /sdcard/screen.png", shell=True)
-            subprocess.run(f"adb pull /sdcard/screen.png screen.png", shell=True)
-            image = Image.open("screen.png")
-            cropped_img = image.crop((10,105,300,875))
-
-            text = pytesseract.image_to_string(cropped_img, lang='kor')
-        if "로그" in text:
-            subprocess.run("adb shell input tap 165 255")
-            subprocess.run("adb shell screencap -p /sdcard/screen.png", shell=True)
-            subprocess.run(f"adb pull /sdcard/screen.png screen.png", shell=True)
-            image = Image.open("screen.png")
-            cropped_img = image.crop((10,105,300,875))
-
-            text = pytesseract.image_to_string(cropped_img, lang='kor')
-        
-        
-    
-    def check_settings_menu_ocr(self):
-        subprocess.run("adb shell screencap -p /sdcard/screen.png", shell=True)
-        subprocess.run(f"adb pull /sdcard/screen.png screen.png", shell=True)
-        
-        image = Image.open("screen.png")
-        cropped_img = image.crop((10,105,300,875))
-
-        text = pytesseract.image_to_string(cropped_img, lang='kor')
-        r1=False
-        r2=False
-        r3=False
-        r4=False
-        if "공간" in text:
-            subprocess.run("adb shell input tap 165 130")
-            subprocess.run("adb shell screencap -p /sdcard/screen.png", shell=True)
-            subprocess.run(f"adb pull /sdcard/screen.png screen.png", shell=True)
-            image = Image.open("screen.png")
-            cropped_img = image.crop((10,105,300,875))
-
-            text = pytesseract.image_to_string(cropped_img, lang='kor')
-        if "좌표계" in text:
-            subprocess.run("adb shell input tap 165 195")
-            subprocess.run("adb shell screencap -p /sdcard/screen.png", shell=True)
-            subprocess.run(f"adb pull /sdcard/screen.png screen.png", shell=True)
-            image = Image.open("screen.png")
-            cropped_img = image.crop((10,105,300,875))
-
-            text = pytesseract.image_to_string(cropped_img, lang='kor')
-        if "옵션" in text:
-            subprocess.run("adb shell input tap 165 255")
-            subprocess.run("adb shell screencap -p /sdcard/screen.png", shell=True)
-            subprocess.run(f"adb pull /sdcard/screen.png screen.png", shell=True)
-            image = Image.open("screen.png")
-            cropped_img = image.crop((10,105,300,875))
-
-            text = pytesseract.image_to_string(cropped_img, lang='kor')
-        if "보호기" in text:
-            subprocess.run("adb shell input tap 165 315")
-            subprocess.run("adb shell screencap -p /sdcard/screen.png", shell=True)
-            subprocess.run(f"adb pull /sdcard/screen.png screen.png", shell=True)
-            image = Image.open("screen.png")
-            cropped_img = image.crop((10,105,300,875))
-
-            text = pytesseract.image_to_string(cropped_img, lang='kor')
- 
-        return r1,r2,r3,r4
-
     def perform_ocr(self) -> str:
         subprocess.run("adb shell screencap -p /sdcard/screen.png", shell=True)
         subprocess.run(f"adb pull /sdcard/screen.png screen.png", shell=True)
@@ -129,7 +47,3 @@ class OCREvaluator:
 
         return full_text, found
     
-
-ocr = OCREvaluator()
-#r1, r2, r3 = ocr.check_system_menu_ocr()
-s1,s2,s3,s4 = ocr.check_settings_menu_ocr()

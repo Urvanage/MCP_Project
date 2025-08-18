@@ -1,1 +1,19 @@
 test_screen,user_input,result,log
+초기화면,작업 메뉴로 이동 프로그램 버튼 클릭 시 각 메뉴 화면으로 이동하는지,failed,"
+[INFO] Executing step: 1. (Click) Tap the '프로그램 작성' button on Conty's initial screen.
+[INFO] Mapped to: HomeProgramBtn, Action: tap, Data: None
+[INFO] Action successful. Current location: Program
+
+[INFO] Executing step: 2. (Click) Tap the '시스템' button on any screen.
+[INFO] Mapped to: SystemBtn, Action: tap, Data: None
+[INFO] Action successful. Current location: System
+
+[INFO] Executing step: 3. (Click) Press the '실행' button from the initial screen or related menu.
+[INFO] Mapped to: RunBtn, Action: tap, Data: None
+[INFO] Action successful. Current location: Run
+
+[INFO] Executing step: 4. (Observe) Navigates to the execution screen where the written program can be executed, and events & parameters are checked.
+[INFO] Mapped to: Run, Action: observation, Data: None
+[INFO] Observing for: None
+[WARN] Observation result is uncertain.
+[FAIL] Failed to return to test screen: Run to Home"

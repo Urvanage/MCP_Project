@@ -31,6 +31,10 @@ class StepAnalyzer: #
         """
         관측 스텝을 분석하여 로그 또는 OCR 중 적절한 방식을 선택하고 실행합니다.
         
+        - 임의의 화면으로 이동했는지 확인하는 경우에는 로그 방식을 선택하세요.
+        - 대부분의 경우에는 로그 방식을, OCR 이 특정된 방식에는 OCR을 선택하세요.
+        - 연결이 되었는지 확인하는 경우에는 로그 방식을 선택하세요. 
+        
         Args:
             step_description (str): 현재 스텝의 설명 (e.g., "Verify the presence of 'Simulation Mode' text on the screen.")
             step_expected_result (str): 스텝의 기대 결과 (optional)

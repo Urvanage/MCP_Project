@@ -92,4 +92,3 @@ class InMemoryLogMonitor:
             if keyword.lower() in line.lower():
                 return line
         return None
-    

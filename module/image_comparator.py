@@ -67,5 +67,82 @@ class ImageComparator:
             (202, 62): (165, 315),
         }
         self.check_menu("settings_screen.png", tap_map)
+    
+    def _capture_and_load_screen(self, filename="current_full_screen.png"):
+        """전체 화면을 캡처하고 PIL Image 객체로 불러옵니다."""
+        subprocess.run("adb shell screencap -p /sdcard/screen.png", shell=True)
+        subprocess.run(f"adb pull /sdcard/screen.png screen.png", shell=True)
+        
+        image = Image.open("screen.png")
+        #image.save("current_screen.png")
+        return image
 
-img = ImageComparator().check_system_menu()
+    def _are_images_similar(self, img1: np.ndarray, img2: np.ndarray, threshold=10) -> bool:
+        """두 넘파이 배열 이미지의 유사성을 비교합니다. (평균 픽셀 차이)"""
+        if img1.shape != img2.shape:
+            return False
+        
+        diff = np.abs(img1.astype(np.int16) - img2.astype(np.int16))
+        mean_diff = np.mean(diff)
+        
+        #print(f"[DEBUG] 이미지 유사도 검사 (평균 픽셀 차이): {mean_diff:.2f}")
+        return mean_diff < threshold
+
+    def save_screen(self):
+        subprocess.run("adb shell screencap -p /sdcard/screen.png", shell=True)
+        subprocess.run(f"adb pull /sdcard/screen.png screen.png", shell=True)
+        
+        image = Image.open("screen.png")
+        # screen.png 지우는 코드
+        cropped_img = image.crop((1290,30,1355,50))
+        cropped_img.save("current_screen.png")
+        return cropped_img
+    
+    def check_current_screen(self) -> str:
+        """
+        현재 화면을 캡처하여 어떤 메뉴인지 식별합니다.
+        미리 정의된 각 탭 영역을 잘라내어 기준 이미지와 비교합니다.
+        """
+        print("\n==== 현재 화면 식별 시작 ====")
+        full_screen = self._capture_and_load_screen()
+        if full_screen is None:
+            #print("[ERROR] 스크린샷을 가져올 수 없어 'Home'으로 간주합니다.")
+            return "Home"
+
+        # 각 메뉴 탭의 이름, 자를 좌표 (left, top, right, bottom), 기준 이미지 파일명 정의
+        screen_map = {
+            "Program": ((160, 30, 235, 50), "program_check.png"),
+            "Run":     ((255, 30, 305, 50), "run_check.png"),
+            "Settings":   ((335, 30, 375, 50), "settings_check.png"),
+            "Move":    ((1220, 30, 1265, 50), "move_check.png"),
+            "System":  ((1290, 30, 1355, 50), "system_check.png"),
+        }
+
+        for screen_name, (coords, ref_filename) in screen_map.items():
+            #print(f"---> '{screen_name}' 탭 확인 중...")
+            
+            # 1. 현재 화면에서 해당 탭 영역 잘라내기
+            current_tab_img = full_screen.crop(coords)
+            current_tab_arr = np.array(current_tab_img)
+            
+            # 2. 기준 이미지 불러오기
+            ref_filepath = os.path.join(self.reference_path, ref_filename)
+            if not os.path.exists(ref_filepath):
+                #print(f"[WARNING] 기준 파일을 찾을 수 없습니다: {ref_filepath}")
+                continue # 다음 탭으로 넘어감
+            
+            ref_img = Image.open(ref_filepath)
+            ref_arr = np.array(ref_img)
+
+            # 3. 두 이미지 비교
+            if self._are_images_similar(current_tab_arr, ref_arr):
+                #print(f"====> 결과: 현재 화면은 '{screen_name}' 입니다. <====")
+                return screen_name
+
+        # 모든 탭과 일치하지 않는 경우
+        #print("====> 결과: 활성화된 탭을 찾지 못했습니다. 'Home'으로 인식합니다. <====")
+        return "Home"
+
+#img = ImageComparator().check_system_menu()
+
+#img = ImageComparator().check_current_screen()

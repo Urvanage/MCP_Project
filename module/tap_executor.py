@@ -44,6 +44,10 @@ class TapExecutor:
 
         return normalized
     
+    def tap_middle(self):
+        cmd = "adb shell input tap 810 50"
+        subprocess.run(cmd, shell=True)
+
     def tap(self, tap_sequence, avoid=None):
         tap_sequence = self._normalize(tap_sequence)
         last_tapped_item = None
