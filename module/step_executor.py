@@ -2,12 +2,10 @@ import asyncio
 from module.log_monitor import *
 from module.canonical_mapper import *
 from module.cypher_generator import *
-from module.log_analyzer import *
 from module.neo4j_handler import *
 from module.tap_executor import *
-from module.step_analyzer import *
-from module.ocr_evaluator import *
 from action_mcp_client import run_action_agent
+from verify_mcp_client import run_verify_agent, run_analysis_agent
 
 def extract_json_from_response(raw_text: str) -> dict:
     pattern = r"```json\n(.*?)\n```"
@@ -24,10 +22,8 @@ def extract_json_from_response(raw_text: str) -> dict:
         raise ValueError("Response did not contain a JSON code block.")
 
 class StepExecutor:
-    def __init__(self, user_input = None,start_point=None):
-        self.monitor = InMemoryLogMonitor()
-        self.monitor.start_monitoring()
-        self.monitor.setTime()
+    def __init__(self, monitor: InMemoryLogMonitor, user_input = None,start_point=None):
+        self.monitor = monitor
         self.mapper = LLMCanonicalMapper(
             alias_path="resource/ui_alias.json",
             graph_path="resource/graph_structure.txt"
@@ -42,10 +38,14 @@ class StepExecutor:
             cypher=""
         )
         self.tap_executor = TapExecutor()
-        self.step_analyzer = StepAnalyzer()
+        self.step_passed = True
+    
 
     def setMonitorTime(self):
         self.monitor.setTime()
+
+    def resetState(self):
+        self.step_passed=True
 
     def setStartScreen(self, start_point):
         self.start_point = {
@@ -179,13 +179,17 @@ class StepExecutor:
                 else:
                     self.generator.update_last_clicked_screen(toScreen)
             
-            
     def get_startPoint(self):
         startPoint = self.start_point
         if startPoint == None:
             return "Home"
         else:
             return startPoint.get("name")
+
+    def get_finalResult(self):
+        finalResult = self.total_result
+        self.total_result = {}
+        return finalResult
 
     def __del__(self):
         if hasattr(self, "neo4j") and self.neo4j:
@@ -194,48 +198,25 @@ class StepExecutor:
             except Exception as e:
                 print(f"[WARN] Failed to close neo4j in destructor: {e}")
 
-    def _observate_result(self):
+    async def _observate_result(self, step, expected_result):
         print("\n==== Observation ====")
-        time.sleep(10)
+        print(f"Expected Result: {expected_result}")
+        self.monitor.save_log()
+        time.sleep(1)
+
+        # Verify MCP 에이전트로부터 결과와 이유를 받음
+        res, reason = await run_verify_agent(step, expected_result)
+        if res=="Error":
+            print("[ERROR] Observation Error Occurred")
+            return
         
-        #print(self.monitor.get_logs())
-        logs = []
-        logs.append(self.monitor.search("[Msg]"))
-        logs.append(self.monitor.search("Toast.Show"))
-        logs.append(self.monitor.search("StartFragment :"))
-        logs = [str(log) for log in logs if log is not None]
-        #print(logs)
+        print(f"Observation Result: {res}\nReason: {reason}")
+        if res.lower()=="fail":
+            self.step_passed = False # 현재 step 성공 여부
         
-        analyzer = self.step_analyzer
-        analyzer.analyze_observation_mode(self.step, logs=logs)
+        self.total_result = {"step": step, "result": res}
 
-        """
-        if obs_config["method"] == "log":
-            logs = []
-            logs.append(self.monitor.search("[Msg]"))
-            logs.append(self.monitor.search("Toast.Show"))
-            logs = [str(log) for log in logs if log is not None]
-
-            self.analyzer = LogAnalyzer()
-            result = self.analyzer.analyze(self.step, logs)
-            print(f"Log 분석 결과: {result}")
-
-        elif obs_config["method"] == "ocr":
-            search_text = obs_config.get("search_text", "")
-            ocr_text, found = OCREvaluator().perform_ocr_and_search(search_text)
-            print(f"OCR 분석 결과: {found}")
-        """
-        """
-        logs = []
-        logs.append(self.monitor.search("[Msg]"))
-        logs.append(self.monitor.search("Toast.Show"))
-        logs = [str(log) for log in logs if log is not None]
-
-        self.analyzer = LogAnalyzer()
-        result = self.analyzer.analyze(self.step, logs)
-        
-        print(result)
-        """
+        self.monitor.setTime()
 
     def _run_cypher_with_retry(self, canonical_name):
         max_retries = 5
@@ -280,7 +261,10 @@ class StepExecutor:
         
         return screen_name
 
-    async def run_step(self, step: str):
+    async def run_step(self, step: str, expected_result: str):
+        if self.step_passed == False:
+            return 
+        
         self.step = step
         print(f"From [run_step] | Starting Point : {self.start_point}")
         #print(self.monitor.get_logs())
@@ -289,68 +273,111 @@ class StepExecutor:
         if self.isScreen == False:
             canonical_place= self.neo4j.get_current_screen(canonical_place)
 
-        result = self.mapper.resolve(step, self.user_input,canonical_place)
-        
-        resolved_instr = extract_json_from_response(result)
+        result = self.mapper.resolve(step, self.user_input,canonical_place, expected_result)
+        resolved_instr= result
+        print(resolved_instr)
         
         print(f"==== Current STEP ====\n{step}")
 
         canonical_name = resolved_instr.get("canonical_name")
         action_type = resolved_instr.get("action_type")
         action_data = resolved_instr.get("action_data")
+        expected_result = resolved_instr.get("expected_result")
 
-        print(f"Canonical Name: {canonical_name}, Action Type: {action_type}, Action Data: {action_data}")
+        print(f"Canonical Name: {canonical_name}, Action Type: {action_type}, Action Data: {action_data}, Expected Result: {expected_result}")
 
-        if action_type == "observation":
-            self._observate_result()
-            return action_type
+        if not hasattr(self, "generator") or self.generator is None:
+            self.generator = LLMCypherGenerator(
+                graph_path="resource/graph_structure.txt",
+                initial_last_clicked_ui=self.start_point
+            )
+
+        cypher_query = self.generator.generate(canonical_name)
+            
+        print("Initial Cypher Query: \n", cypher_query)
+        
+        if not hasattr(self, "neo4j") or self.neo4j is None:
+            self.neo4j = Neo4jHandler(
+                uri="bolt://localhost:7687",
+                user="neo4j",
+                password="neo4jneo4j",
+                cypher=cypher_query
+            )
         else:
+            self.neo4j.cypher = self.neo4j._extract_cypher_query(cypher_query)
+        
+        query_result = self._run_cypher_with_retry(canonical_name=canonical_name)
+        
+        if query_result == False:
+            self.neo4j.close()
+            return
+        
+        avoid = None or self.start_point
+        self.tap_executor = TapExecutor(avoid=avoid)
 
-            if not hasattr(self, "generator") or self.generator is None:
-                self.generator = LLMCypherGenerator(
-                    graph_path="resource/graph_structure.txt",
-                    initial_last_clicked_ui=self.start_point
-                )
-            
-            cypher_query = self.generator.generate(canonical_name)
-            
-            print("Initial Cypher Query: \n", cypher_query)
-            
-            if not hasattr(self, "neo4j") or self.neo4j is None:
-                self.neo4j = Neo4jHandler(
-                    uri="bolt://localhost:7687",
-                    user="neo4j",
-                    password="neo4jneo4j",
-                    cypher=cypher_query
-                )
-            else:
-                self.neo4j.cypher = self.neo4j._extract_cypher_query(cypher_query)
-            
-            query_result = self._run_cypher_with_retry(canonical_name=canonical_name)
-            
-            if query_result == False:
-                self.neo4j.close()
-                return
-            
-            avoid = None or self.start_point
-            self.tap_executor = TapExecutor(avoid=avoid)
+        if action_type == "hold":
+            tap_result = self.tap_executor.hold(query_result)
+        else:
             tap_result = self.tap_executor.tap(query_result)
-            if tap_result == False:
-                return
+        
+        if tap_result is False:
+            return
+        
+        self.start_point = tap_result
+        screen_name = self._update_start_point_from_ui(tap_result)
+
+        if action_type not in ["tap", "hold"]:
+            print("[INFO] Additional action required, calling action_mcp client...")
+            ui_name = await run_action_agent(screen_name, step)
+            self.start_point = {
+                "name": ui_name,
+                "x": None,
+                "y": None
+            }
+            screen_name = self._update_start_point_from_ui(self.start_point)
+
+        """
+        avoid = None or self.start_point
+        self.tap_executor = TapExecutor(avoid=avoid)
+        tap_result = self.tap_executor.tap(query_result)
+        if tap_result == False:
+            return
+        
+        self.start_point = tap_result
+        screen_name = self._update_start_point_from_ui(tap_result)
+
+        if action_type == "tap":
+            # 단순 tap 액션
+            pass
+        elif action_type == "pinch":
+            # pinch 액션
+            pass
+        elif action_type == "hold":
+            # hold 하는 액션 => Robot에서 정보 가져오기 필요함
+            pass
+        else:
+            # 이외의 추가적인 action을 해야함.
+            print("[INFO] Additional action required, calling action_mcp client...")
+            ui_name = await run_action_agent(screen_name, step)
+
+            self.start_point = {
+                "name": ui_name,
+                "x": None,
+                "y": None
+            }
+            screen_name = self._update_start_point_from_ui(self.start_point)
+        """
             
-            self.start_point = tap_result
-            screen_name = self._update_start_point_from_ui(tap_result)
 
-            if action_type != "tap":
-                print("[INFO] Additional action required, calling action_mcp client...")
+        await self._observate_result(step, expected_result)     
 
-                ui_name = await run_action_agent(screen_name, step)
-
-                self.start_point = {
-                    "name": ui_name,
-                    "x": None,
-                    "y": None
-                }
-                screen_name = self._update_start_point_from_ui(self.start_point)
-
-            
+        """
+        # 실패한 경우에, 무엇 때문에 실패했는지 분석해보려 했지만 아직은 정보가 더 필요한 것 같음.
+        if self.step_passed == False:
+            reason, recomm = await run_analysis_agent(step, expected_result, action_type, canonical_name)
+            if reason != "Error":
+                print("==== Analysis ====")
+                print(f"Failure Reason: {reason}\nRecommend action: {recomm}")
+        else:
+            print("[ERROR] Analysis Error Occurred")
+        """

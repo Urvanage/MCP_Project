@@ -40,7 +40,8 @@ def update_neo4j(node, name, properties=None):
 
 def get_list():
     cyphers = {
-        "action": "MATCH (n:Action) RETURN n.name",
+        "tap": "MATCH (n:Tap) RETURN n.name",
+        "hold": "MATCH (n:Hold) RETURN n.name",
         "screen": "MATCH (n:Screen) RETURN n.name",
         "uielement": "MATCH (n:UIElement) RETURN n.name"
     }
@@ -52,7 +53,7 @@ def get_list():
             lists[key] = []
         else:
             lists[key] = [item[0] for item in result]
-    return lists["action"], lists["screen"], lists["uielement"]
+    return lists["tap"], lists["hold"], lists["screen"], lists["uielement"]
 
 def delete_ui_alias(name, type):
     global data
@@ -75,8 +76,7 @@ def delete_node(node_name, node_type):
 
     deleting_cypher = f"""
     MATCH (n:{node_type} {{name: "{node_name}"}})
-    OPTIONAL MATCH (n)-[r]-()
-    DELETE n, r
+    DETACH DELETE n
     """
 
     n4.setCypher(deleting_cypher)
@@ -102,15 +102,14 @@ def delete_relationship(reltype, n1name, n1type, n2name, n2type):
         return False, f"[에러 발생] {error}"
 
     if result and isinstance(result, list) and len(result) > 0:
-        deleted_count = result[0][0]
+        deleted_count = result[0][0] if result[0] else 0
         if deleted_count > 0:
             return True, f"[성공] 관계 '{n1name}' -[:{reltype}]-> '{n2name}'가 삭제되었습니다."
         else:
             return False, f"[실패] '{n1name}' -[:{reltype}]-> '{n2name}' 관계가 존재하지 않습니다."
     else:
-        return False, "[실패] 결과가 비어 있거나 예상치 못한 형식입니다."
+        return False, "[실패] 관계가 존재하지 않거나 예상치 못한 결과 형식입니다."
 
-# 새로운 함수들
 def get_node_properties(node_name, node_type):
     property_cypher = f"""
     MATCH (n:{node_type} {{name:"{node_name}"}})
@@ -126,7 +125,6 @@ def update_node_properties(node_name, node_type, new_props, remove_props):
     set_clauses = []
     remove_clauses = []
     
-    # SET clauses for new and updated properties
     if new_props:
         for k, v in new_props.items():
             if isinstance(v, (int, float, bool)):
@@ -134,7 +132,6 @@ def update_node_properties(node_name, node_type, new_props, remove_props):
             else:
                 set_clauses.append(f"n.{k} = {json.dumps(v, ensure_ascii=False)}")
     
-    # REMOVE clauses for properties to be deleted
     if remove_props:
         for prop_key in remove_props:
             remove_clauses.append(f"n.{prop_key}")
@@ -175,6 +172,9 @@ def create_node_web():
     node_type = request.form['node_type']
     node_name = request.form['node_name']
     
+    if node_type == "Action": # Action 타입 선택 시 하위 타입 사용
+        node_type = request.form['action_subtype']
+
     if check_if_exist(node_type, node_name):
         return jsonify({"success": False, "message": f"'{node_name}' ({node_type}) 노드가 이미 존재합니다."})
 
@@ -207,7 +207,8 @@ def create_relation_web():
     if not check_if_exist(source_type, source_name):
         return jsonify({"success": False, "message": f"오류: 시작 노드 '{source_name}' ({source_type})가 존재하지 않습니다."})
 
-    if target_type == "Action":
+    # 타겟이 Tap 또는 Hold이고 존재하지 않으면 생성
+    if target_type in ["Tap", "Hold"]:
         if not check_if_exist(target_type, target_name):
             update_neo4j(target_type, target_name)
     elif not check_if_exist(target_type, target_name):
@@ -216,9 +217,9 @@ def create_relation_web():
     relation_type = None
     if source_type == "Screen" and target_type == "UIElement":
         relation_type = "CONTAINS"
-    elif source_type == "UIElement" and (target_type == "UIElement" or target_type == "Action"):
+    elif source_type == "UIElement" and (target_type == "UIElement" or target_type in ["Tap", "Hold"]):
         relation_type = "TRIGGERS"
-    elif source_type == "Action" and target_type == "Screen":
+    elif source_type in ["Tap", "Hold"] and target_type == "Screen":
         relation_type = "LEADS_TO"
     else:
         return jsonify({"success": False, "message": f"오류: '{source_type}'와(과) '{target_type}' 사이에는 유효한 관계 타입이 없습니다."})
@@ -261,9 +262,10 @@ def delete_relationship_web():
 
 @app.route('/get_nodes', methods=['GET'])
 def get_nodes_api():
-    action_list, screen_list, uielement_list = get_list()
+    tap_list, hold_list, screen_list, uielement_list = get_list()
     return jsonify({
-        "action": action_list,
+        "tap": tap_list,
+        "hold": hold_list,
         "screen": screen_list,
         "uielement": uielement_list
     })

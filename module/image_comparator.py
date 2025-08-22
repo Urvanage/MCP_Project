@@ -17,7 +17,6 @@ class ImageComparator:
         subprocess.run(f"adb pull /sdcard/screen.png screen.png", shell=True)
         
         image = Image.open("screen.png")
-        # screen.png 지우는 코드
         cropped_img = image.crop((10,105,300,875))
         cropped_img.save("current_screen.png")
         return cropped_img
@@ -38,16 +37,12 @@ class ImageComparator:
 
         if np.any(diff_mask):
             y, x = np.argwhere(diff_mask)[0]
-            print(f"[DIFF] 첫 번째 다른 픽셀 위치: (x={x}, y={y})")
 
-            # 오차 범위 허용 비교 함수
             for (ref_y, ref_x), (tap_x, tap_y) in tap_map.items():
                 if abs(y - ref_y) <= 5:
-                    print(f"[ACTION] 탭 위치: ({tap_x}, {tap_y})")
                     subprocess.run(f"adb shell input tap {tap_x} {tap_y}", shell=True)
                     subprocess.run("adb shell input tap 845 55", shell=True)  # 닫기?
                     return self.check_menu(menu_name, tap_map)  # 재귀 호출
-            print("[INFO] 일치하는 탭 좌표 없음.")
         else:
             print("[DIFF] 모든 픽셀이 동일합니다.")
 
@@ -74,7 +69,6 @@ class ImageComparator:
         subprocess.run(f"adb pull /sdcard/screen.png screen.png", shell=True)
         
         image = Image.open("screen.png")
-        #image.save("current_screen.png")
         return image
 
     def _are_images_similar(self, img1: np.ndarray, img2: np.ndarray, threshold=10) -> bool:
@@ -85,7 +79,6 @@ class ImageComparator:
         diff = np.abs(img1.astype(np.int16) - img2.astype(np.int16))
         mean_diff = np.mean(diff)
         
-        #print(f"[DEBUG] 이미지 유사도 검사 (평균 픽셀 차이): {mean_diff:.2f}")
         return mean_diff < threshold
 
     def save_screen(self):
@@ -93,7 +86,6 @@ class ImageComparator:
         subprocess.run(f"adb pull /sdcard/screen.png screen.png", shell=True)
         
         image = Image.open("screen.png")
-        # screen.png 지우는 코드
         cropped_img = image.crop((1290,30,1355,50))
         cropped_img.save("current_screen.png")
         return cropped_img
@@ -106,10 +98,7 @@ class ImageComparator:
         print("\n==== 현재 화면 식별 시작 ====")
         full_screen = self._capture_and_load_screen()
         if full_screen is None:
-            #print("[ERROR] 스크린샷을 가져올 수 없어 'Home'으로 간주합니다.")
             return "Home"
-
-        # 각 메뉴 탭의 이름, 자를 좌표 (left, top, right, bottom), 기준 이미지 파일명 정의
         screen_map = {
             "Program": ((160, 30, 235, 50), "program_check.png"),
             "Run":     ((255, 30, 305, 50), "run_check.png"),
@@ -119,28 +108,20 @@ class ImageComparator:
         }
 
         for screen_name, (coords, ref_filename) in screen_map.items():
-            #print(f"---> '{screen_name}' 탭 확인 중...")
             
-            # 1. 현재 화면에서 해당 탭 영역 잘라내기
             current_tab_img = full_screen.crop(coords)
             current_tab_arr = np.array(current_tab_img)
             
-            # 2. 기준 이미지 불러오기
             ref_filepath = os.path.join(self.reference_path, ref_filename)
             if not os.path.exists(ref_filepath):
-                #print(f"[WARNING] 기준 파일을 찾을 수 없습니다: {ref_filepath}")
-                continue # 다음 탭으로 넘어감
+                continue
             
             ref_img = Image.open(ref_filepath)
             ref_arr = np.array(ref_img)
 
-            # 3. 두 이미지 비교
             if self._are_images_similar(current_tab_arr, ref_arr):
-                #print(f"====> 결과: 현재 화면은 '{screen_name}' 입니다. <====")
                 return screen_name
 
-        # 모든 탭과 일치하지 않는 경우
-        #print("====> 결과: 활성화된 탭을 찾지 못했습니다. 'Home'으로 인식합니다. <====")
         return "Home"
 
 #img = ImageComparator().check_system_menu()

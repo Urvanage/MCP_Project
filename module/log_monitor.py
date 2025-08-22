@@ -1,7 +1,6 @@
-import time
 import re
 from datetime import datetime, timedelta
-
+from pathlib import Path
 from collections import deque
 from datetime import datetime, timedelta
 
@@ -92,3 +91,24 @@ class InMemoryLogMonitor:
             if keyword.lower() in line.lower():
                 return line
         return None
+    
+    def save_log(self):
+        logs = []
+        logs.append(self.search("[Msg]"))
+        logs.append(self.search("Toast.Show"))
+        logs.append(self.search("StartFragment :"))
+        logs = [str(log) for log in logs if log is not None]
+        # print(f"==== [LOGMONITOR] ====\n{logs}")
+
+        curr_dir = Path(__file__).parent
+        resource_folder = curr_dir.parent / 'resource'
+        file_path = resource_folder / 'log_info.txt'
+        
+        try:
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.truncate(0)
+                for log_entry in logs:
+                    f.write(log_entry + "\n")
+            #print(f"로그가 성공적으로 저장되었습니다.")
+        except IOError as e:
+            print(f"파일 작성 중 오류가 발생했습니다: {e}")

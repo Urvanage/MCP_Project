@@ -39,7 +39,7 @@ def find_contained_elements(screen: str):
     """Retrieve UIElements which Screen contains"""
     driver = GraphDatabase.driver(uri, auth=(user, password))
     query = """
-    MATCH (s:Screen {name: $screen_name})-[:CONTAINS]->(u:UIElement)-[:TRIGGERS]->(a:Action)
+    MATCH (s:Screen {name: $screen_name})-[:CONTAINS]->(u:UIElement)-[:TRIGGERS]->(a:Tap|Hold)
     RETURN u.name AS ui_name, u.x AS x, u.y AS y, a.name AS action_name
     """
     _log_to_file(f"Tool 'find_contained_elements' called with screen: {screen}")
@@ -105,26 +105,6 @@ def click_ui(info):
         return error_message
 
 @mcp.tool()
-def find_and_follow_action(action: str):
-    """Follow the action and find next place to start with"""
-    driver = GraphDatabase.driver(uri, auth=(user, password))
-    query = """
-    MATCH (a:Action {name: $action_name})-[:LEADS_TO]->(s:Screen)
-    RETURN s.name AS screen_name
-    """
-    logging.info(f"Tool 'find_and_follow_action' called with action: {action}")
-
-    try:
-        with driver.session() as session:
-            result = session.run(query, action_name = action)
-            if result:
-                return result["screen_name"]
-            else:
-                return f"No screen found for action '{action}'"
-    finally:
-        driver.close()
-
-@mcp.tool()
 async def screen_description(screen: str) -> str: # 반환 타입을 str로 명시
     """
     Retrieves the specific description for a given screen from the Neo4j graph database.
@@ -162,51 +142,6 @@ async def screen_description(screen: str) -> str: # 반환 타입을 str로 명�
     finally:
         await driver.close()
 
-@mcp.tool()
-def check_screen_type(screen: str):
-    """Check the type of current screen, so you can decide if any additional action is needed."""
-    logging.info(f"Tool 'check_screen_type' called with screen: {screen}")
-
-    driver = GraphDatabase.driver(uri, auth=(user, password))
-    query = """
-    MATCH (s:Screen {name: "IPInputKeyboard"})
-    WHERE s.check_type IS NOT NULL
-    RETURN
-        s.name AS screen_name,
-        s.check_type AS type,
-        s.check_x AS x,
-        s.check_y AS y,
-        s.check_w AS w,
-        s.check_h AS h
-    """
-    try:
-        with driver.session() as session:
-            result = session.run(query, screen_name = screen)
-            return result.single()
-    finally:
-        driver.close()
-
-tesseract_path = os.getenv("TESSERACT_CMD_PATH")
-if tesseract_path:
-    pytesseract.pytesseract.tesseract_cmd = tesseract_path
-
-@mcp.tool()
-def perform_ocr(region: dict) -> str:
-    x = region.get("x")
-    y = region.get("y")
-    w = region.get("w")
-    h = region.get("h")
-    
-    subprocess.run("adb shell screencap -p /sdcard/screen.png", shell=True)
-    subprocess.run(f"adb pull /sdcard/screen.png screen.png", shell=True)
-    
-    image = cv2.imread("screen.png")
-    cropped = image[y:y+h, x:x+w]
-
-    pil_img = Image.fromarray(cv2.cvtColor(cropped, cv2.COLOR_BGR2RGB))
-    text = pytesseract.image_to_string(pil_img)
-    return text.strip()
-
 @mcp.prompt()
 def action_data_checker(screen_name: str, user_goal: str):
     return [
@@ -243,6 +178,7 @@ You have access to the following tools:
 Instructions:
 - If IP address input is required, the IP address string provided in the user goal should be mapped to the corresponding numeric and dot (.) keys and clicked in order.
 - Never convert segments like `0.74` to `074`, and never drop the dots.
+- Never convert segments like `0.89` to `089`, never drop the dots in any other IP addresses.
 - First, **ALWAYS START by calling `screen_description` with the current screen name** to get any additional instructions or context for the current screen.
 - Then, use `find_contained_elements` to get available UI elements and their actions on the current screen.
 - Finally, based on the user's goal, choose the most appropriate UI element and use `click_ui` to tap it.
@@ -266,23 +202,19 @@ Given the current screen name ('{screen_name}') and the user's overarching goal 
 You have access to the following tools:
 - find_contained_elements(screen): Returns UI elements and their actions on the given screen. Use this after a significant UI change (like a click) to get updated elements.
 - click_ui(info): Tap on a UI element given its name and coordinates.
-- find_and_follow_action(action): Find the next screen after performing an action.
-- check_screen_type(screen): Check if the screen requires OCR and get bounding box if so.
 - screen_description(screen): Retrieves the specific description or initial instructions for a given screen from the Neo4j graph database.
-- perform_ocr(region): Perform OCR on a specified region.
 
 Dont forget the press the dot when you press the IP key.
 
 Instructions:
 1. **Always start by calling `screen_description` with the current screen name** to get any additional instructions or context.
 2. Then, use `find_contained_elements` to get available UI elements and their actions on the current screen.
-3. Based on the user's goal and the available UI elements, **identify and perform only one specific next action.**
-4. If the next action is a tap, use `click_ui` to perform it.
-5. **Crucially, after performing an action (e.g., a tap), consider if the user's goal is fully achieved.**
+3. If the next action is a tap, use `click_ui` to perform it.
+4. **Crucially, after performing an action (e.g., a tap), consider if the user's goal is fully achieved.**
     - If the goal is fully achieved (e.g., all digits of an IP are entered, and 'confirm' is clicked, or a final state is reached), state "Goal accomplished." and **do not call any further tools.**
     - If **further actions are required** to achieve the goal, clearly state your reasoning and **the next single logical step** you plan to take. Do not attempt to complete the entire goal in one go; break it down into atomic steps.
-6. **For IP address input**: You must click each digit/dot one by one. After each `click_ui` for a digit/dot, **re-evaluate the current screen state** by implicitly assuming you need to find the next element or by stating you are ready for the next iteration. Do not output all clicks in a single turn.
-7. If you need to make a decision or explain why you are taking a certain action, provide your reasoning clearly before calling a tool.
+5. **For IP address input**: You must click each digit/dot one by one. After each `click_ui` for a digit/dot, **re-evaluate the current screen state** by implicitly assuming you need to find the next element or by stating you are ready for the next iteration. Do not output all clicks in a single turn.
+6. If you need to make a decision or explain why you are taking a certain action, provide your reasoning clearly before calling a tool.
 """
     return [
         base.AssistantMessage(system_content),

@@ -59,6 +59,18 @@
                         <label class="btn btn-outline-primary" for="screen_radio">Screen</label>
                         <input type="radio" class="btn-check" name="node_type" id="uielement_radio" value="UIElement" autocomplete="off">
                         <label class="btn btn-outline-primary" for="uielement_radio">UIElement</label>
+                        <input type="radio" class="btn-check" name="node_type" id="action_radio" value="Action" autocomplete="off">
+                        <label class="btn btn-outline-primary" for="action_radio">Action</label>
+                    </div>
+                </div>
+
+                <div id="action_subtype_container" class="mb-3" style="display: none;">
+                    <label class="form-label">Action 하위 타입</label><br>
+                    <div class="btn-group" role="group">
+                        <input type="radio" class="btn-check" name="action_subtype" id="tap_radio" value="Tap" autocomplete="off" checked>
+                        <label class="btn btn-outline-secondary" for="tap_radio">Tap</label>
+                        <input type="radio" class="btn-check" name="action_subtype" id="hold_radio" value="Hold" autocomplete="off">
+                        <label class="btn btn-outline-secondary" for="hold_radio">Hold</label>
                     </div>
                 </div>
 
@@ -98,7 +110,7 @@
         </div>
 
         <div id="create-relation-form" class="form-section card p-4">
-            <h2 class="card-title text-center d-flex justify-content-between align-items-center">
+             <h2 class="card-title text-center d-flex justify-content-between align-items-center">
                 관계 생성
                 <button type="button" class="btn btn-sm btn-info" onclick="refreshNodeList()">목록 새로고침</button>
             </h2>
@@ -114,9 +126,19 @@
                         
                         <input type="radio" class="btn-check" name="relation_type" id="rel_3" value="UIElement-TRIGGERS-Action" autocomplete="off">
                         <label class="btn btn-outline-info" for="rel_3">3. UIElement - TRIGGERS - Action</label>
-                        
+
                         <input type="radio" class="btn-check" name="relation_type" id="rel_4" value="Action-LEADS_TO-Screen" autocomplete="off">
                         <label class="btn btn-outline-info" for="rel_4">4. Action - LEADS_TO - Screen</label>
+                    </div>
+                </div>
+
+                <div id="relation_action_subtype_container" class="mb-3" style="display: none;">
+                    <label class="form-label">Action 타입 선택</label><br>
+                    <div class="btn-group" role="group">
+                        <input type="radio" class="btn-check" name="relation_action_subtype" id="rel_tap_radio" value="Tap" autocomplete="off" checked>
+                        <label class="btn btn-outline-secondary" for="rel_tap_radio">Tap</label>
+                        <input type="radio" class="btn-check" name="relation_action_subtype" id="rel_hold_radio" value="Hold" autocomplete="off">
+                        <label class="btn btn-outline-secondary" for="rel_hold_radio">Hold</label>
                     </div>
                 </div>
 
@@ -157,6 +179,17 @@
                         <label class="btn btn-outline-danger" for="del_action">Action</label>
                     </div>
                 </div>
+
+                <div id="delete_action_subtype_container" class="mb-3" style="display: none;">
+                    <label class="form-label">Action 하위 타입</label><br>
+                    <div class="btn-group" role="group">
+                        <input type="radio" class="btn-check" name="delete_action_subtype" id="del_tap_radio" value="Tap" autocomplete="off" checked>
+                        <label class="btn btn-outline-secondary" for="del_tap_radio">Tap</label>
+                        <input type="radio" class="btn-check" name="delete_action_subtype" id="del_hold_radio" value="Hold" autocomplete="off">
+                        <label class="btn btn-outline-secondary" for="del_hold_radio">Hold</label>
+                    </div>
+                </div>
+
                 <div class="mb-3">
                     <label for="delete_node_name" class="form-label">삭제할 노드 이름</label>
                     <div class="autocomplete" style="position:relative;">
@@ -188,6 +221,16 @@
                         
                         <input type="radio" class="btn-check" name="delete_relation_type" id="del_rel_4" value="Action-LEADS_TO-Screen" autocomplete="off">
                         <label class="btn btn-outline-warning" for="del_rel_4">4. Action - LEADS_TO - Screen</label>
+                    </div>
+                </div>
+
+                <div id="delete_relation_action_subtype_container" class="mb-3" style="display: none;">
+                    <label class="form-label">Action 타입 선택</label><br>
+                    <div class="btn-group" role="group">
+                        <input type="radio" class="btn-check" name="delete_relation_action_subtype" id="del_rel_tap_radio" value="Tap" autocomplete="off" checked>
+                        <label class="btn btn-outline-secondary" for="del_rel_tap_radio">Tap</label>
+                        <input type="radio" class="btn-check" name="delete_relation_action_subtype" id="del_rel_hold_radio" value="Hold" autocomplete="off">
+                        <label class="btn btn-outline-secondary" for="del_rel_hold_radio">Hold</label>
                     </div>
                 </div>
 
@@ -225,6 +268,16 @@
                         <label class="btn btn-outline-info" for="upd_uielement">UIElement</label>
                         <input type="radio" class="btn-check" name="update_node_type" id="upd_action" value="Action" autocomplete="off">
                         <label class="btn btn-outline-info" for="upd_action">Action</label>
+                    </div>
+                </div>
+
+                <div id="update_action_subtype_container" class="mb-3" style="display: none;">
+                    <label class="form-label">Action 하위 타입</label><br>
+                    <div class="btn-group" role="group">
+                        <input type="radio" class="btn-check" name="update_action_subtype" id="upd_tap_radio" value="Tap" autocomplete="off" checked>
+                        <label class="btn btn-outline-secondary" for="upd_tap_radio">Tap</label>
+                        <input type="radio" class="btn-check" name="update_action_subtype" id="upd_hold_radio" value="Hold" autocomplete="off">
+                        <label class="btn btn-outline-secondary" for="upd_hold_radio">Hold</label>
                     </div>
                 </div>
 
@@ -269,6 +322,7 @@
             setupRelationForm();
             setupDeleteForms();
             setupUpdateForm();
+            refreshNodeList();
         });
 
         let allNodes = {};
@@ -285,29 +339,33 @@
                 .then(response => response.json())
                 .then(data => {
                     allNodes = data;
-                    updateAutocompleteInputs();
+                    allNodes.action = [...(data.tap || []), ...(data.hold || [])];
                 });
         }
         
         function setupNodeForm() {
             const nodeForm = document.getElementById('nodeForm');
             const uielementProps = document.getElementById('uielement_props');
+            const actionSubtypeContainer = document.getElementById('action_subtype_container');
             const nodeTypeRadios = document.querySelectorAll('input[name="node_type"]');
             
             nodeTypeRadios.forEach(radio => {
                 radio.addEventListener('change', (e) => {
+                    uielementProps.style.display = 'none';
+                    actionSubtypeContainer.style.display = 'none';
+                    document.getElementById('x_coord').required = false;
+                    document.getElementById('y_coord').required = false;
+
                     if (e.target.value === 'UIElement') {
                         uielementProps.style.display = 'block';
                         document.getElementById('x_coord').required = true;
                         document.getElementById('y_coord').required = true;
-                    } else {
-                        uielementProps.style.display = 'none';
-                        document.getElementById('x_coord').required = false;
-                        document.getElementById('y_coord').required = false;
+                    } else if (e.target.value === 'Action') {
+                        actionSubtypeContainer.style.display = 'block';
                     }
                 });
             });
-
+            
             const customPropsContainer = document.getElementById('custom_properties_container');
             document.getElementById('add_prop_btn').addEventListener('click', () => {
                 const propGroup = document.createElement('div');
@@ -325,7 +383,6 @@
 
             nodeForm.addEventListener('submit', function(e) {
                 e.preventDefault();
-                
                 const formData = new FormData(nodeForm);
                 const customProps = {};
                 document.querySelectorAll('.custom-prop-key').forEach((keyInput, index) => {
@@ -336,10 +393,7 @@
                 });
                 formData.append('custom_properties', JSON.stringify(customProps));
 
-                fetch('/create_node', {
-                    method: 'POST',
-                    body: formData
-                })
+                fetch('/create_node', { method: 'POST', body: formData })
                 .then(response => response.json())
                 .then(data => {
                     const messageDiv = document.getElementById('node_message');
@@ -355,38 +409,56 @@
             const sourceNameInput = document.getElementById('source_name');
             const targetNameInput = document.getElementById('target_name');
             const relationRadios = document.querySelectorAll('input[name="relation_type"]');
-            
-            let currentSourceType = 'Screen';
-            let currentTargetType = 'UIElement';
+            const actionSubtypeContainer = document.getElementById('relation_action_subtype_container');
+            const actionSubtypeRadios = document.querySelectorAll('input[name="relation_action_subtype"]');
 
-            function updateAutocompleteInputs() {
+            function updateRelationAutocomplete() {
                 const checkedRadio = document.querySelector('input[name="relation_type"]:checked');
                 if(!checkedRadio) return;
+
                 const [source, rel, target] = checkedRadio.value.split('-');
-                currentSourceType = source;
-                currentTargetType = target;
+                
+                actionSubtypeContainer.style.display = 'none';
+                let sourceType = source.toLowerCase();
+                let targetType = target.toLowerCase();
+
+                if (source === 'Action' || target === 'Action') {
+                    actionSubtypeContainer.style.display = 'block';
+                    const actionSubtype = document.querySelector('input[name="relation_action_subtype"]:checked').value;
+                    if(source === 'Action') sourceType = actionSubtype.toLowerCase();
+                    if(target === 'Action') targetType = actionSubtype.toLowerCase();
+                }
+
                 sourceNameInput.value = '';
                 targetNameInput.value = '';
-                setupAutocomplete(sourceNameInput, () => allNodes[currentSourceType.toLowerCase()] || []);
-                setupAutocomplete(targetNameInput, () => allNodes[currentTargetType.toLowerCase()] || []);
+
+                setupAutocomplete(sourceNameInput, () => allNodes[sourceType] || []);
+                setupAutocomplete(targetNameInput, () => allNodes[targetType] || []);
             }
 
-            relationRadios.forEach(radio => {
-                radio.addEventListener('change', updateAutocompleteInputs);
-            });
-
-            refreshNodeList();
+            relationRadios.forEach(radio => radio.addEventListener('change', updateRelationAutocomplete));
+            actionSubtypeRadios.forEach(radio => radio.addEventListener('change', updateRelationAutocomplete));
+            
+            updateRelationAutocomplete();
 
             relationForm.addEventListener('submit', function(e) {
                 e.preventDefault();
                 const formData = new FormData(relationForm);
-                formData.append('source_type', currentSourceType);
-                formData.append('target_type', currentTargetType);
+                const [source, rel, target] = document.querySelector('input[name="relation_type"]:checked').value.split('-');
+                
+                let sourceType = source;
+                let targetType = target;
 
-                fetch('/create_relation', {
-                    method: 'POST',
-                    body: formData
-                })
+                if (source === 'Action' || target === 'Action') {
+                    const actionSubtype = document.querySelector('input[name="relation_action_subtype"]:checked').value;
+                    if(source === 'Action') sourceType = actionSubtype;
+                    if(target === 'Action') targetType = actionSubtype;
+                }
+                
+                formData.append('source_type', sourceType);
+                formData.append('target_type', targetType);
+
+                fetch('/create_relation', { method: 'POST', body: formData })
                 .then(response => response.json())
                 .then(data => {
                     const messageDiv = document.getElementById('relation_message');
@@ -398,32 +470,43 @@
         }
 
         function setupDeleteForms() {
+            // 노드 삭제 폼 로직
             const deleteNodeForm = document.getElementById('deleteNodeForm');
             const deleteNodeRadios = document.querySelectorAll('input[name="delete_node_type"]');
             const deleteNodeNameInput = document.getElementById('delete_node_name');
-            let currentDeleteNodeType = 'Screen';
-
+            const deleteActionSubtypeContainer = document.getElementById('delete_action_subtype_container');
+            const deleteActionSubtypeRadios = document.querySelectorAll('input[name="delete_action_subtype"]');
+            
             function updateDeleteNodeAutocomplete() {
                 const checkedRadio = document.querySelector('input[name="delete_node_type"]:checked');
                 if(!checkedRadio) return;
-                currentDeleteNodeType = checkedRadio.value;
+                
+                let nodeType = checkedRadio.value;
+                deleteActionSubtypeContainer.style.display = 'none';
+
+                if (nodeType === 'Action') {
+                    deleteActionSubtypeContainer.style.display = 'block';
+                    nodeType = document.querySelector('input[name="delete_action_subtype"]:checked').value;
+                }
+                
                 deleteNodeNameInput.value = '';
-                setupAutocomplete(deleteNodeNameInput, () => allNodes[currentDeleteNodeType.toLowerCase()] || []);
+                setupAutocomplete(deleteNodeNameInput, () => allNodes[nodeType.toLowerCase()] || []);
             }
-            deleteNodeRadios.forEach(radio => {
-                radio.addEventListener('change', updateDeleteNodeAutocomplete);
-            });
+
+            deleteNodeRadios.forEach(radio => radio.addEventListener('change', updateDeleteNodeAutocomplete));
+            deleteActionSubtypeRadios.forEach(radio => radio.addEventListener('change', updateDeleteNodeAutocomplete));
             updateDeleteNodeAutocomplete();
 
             deleteNodeForm.addEventListener('submit', function(e) {
                 e.preventDefault();
                 const formData = new FormData(deleteNodeForm);
-                formData.append('node_type', currentDeleteNodeType);
+                let nodeType = document.querySelector('input[name="delete_node_type"]:checked').value;
+                if(nodeType === 'Action'){
+                    nodeType = document.querySelector('input[name="delete_action_subtype"]:checked').value;
+                }
+                formData.set('node_type', nodeType); 
 
-                fetch('/delete_node', {
-                    method: 'POST',
-                    body: formData
-                })
+                fetch('/delete_node', { method: 'POST', body: formData })
                 .then(response => response.json())
                 .then(data => {
                     const messageDiv = document.getElementById('delete_node_message');
@@ -433,42 +516,59 @@
                 });
             });
 
+            // 관계 삭제 폼 로직
             const deleteRelationForm = document.getElementById('deleteRelationForm');
             const deleteRelationRadios = document.querySelectorAll('input[name="delete_relation_type"]');
             const deleteSourceNameInput = document.getElementById('delete_source_name');
             const deleteTargetNameInput = document.getElementById('delete_target_name');
-            let currentDeleteSourceType = 'Screen';
-            let currentDeleteTargetType = 'UIElement';
-            let currentDeleteRelationType = 'CONTAINS';
+            const deleteRelActionSubtypeContainer = document.getElementById('delete_relation_action_subtype_container');
+            const deleteRelActionSubtypeRadios = document.querySelectorAll('input[name="delete_relation_action_subtype"]');
 
             function updateDeleteRelationAutocomplete() {
                 const checkedRadio = document.querySelector('input[name="delete_relation_type"]:checked');
-                if(!checkedRadio) return;
+                if (!checkedRadio) return;
                 const [source, rel, target] = checkedRadio.value.split('-');
-                currentDeleteSourceType = source;
-                currentDeleteTargetType = target;
-                currentDeleteRelationType = rel;
+                
+                deleteRelActionSubtypeContainer.style.display = 'none';
+                let sourceType = source.toLowerCase();
+                let targetType = target.toLowerCase();
+
+                if (source === 'Action' || target === 'Action') {
+                    deleteRelActionSubtypeContainer.style.display = 'block';
+                    const actionSubtype = document.querySelector('input[name="delete_relation_action_subtype"]:checked').value;
+                    if(source === 'Action') sourceType = actionSubtype.toLowerCase();
+                    if(target === 'Action') targetType = actionSubtype.toLowerCase();
+                }
+
                 deleteSourceNameInput.value = '';
                 deleteTargetNameInput.value = '';
-                setupAutocomplete(deleteSourceNameInput, () => allNodes[currentDeleteSourceType.toLowerCase()] || []);
-                setupAutocomplete(deleteTargetNameInput, () => allNodes[currentDeleteTargetType.toLowerCase()] || []);
+                setupAutocomplete(deleteSourceNameInput, () => allNodes[sourceType] || []);
+                setupAutocomplete(deleteTargetNameInput, () => allNodes[targetType] || []);
             }
-            deleteRelationRadios.forEach(radio => {
-                radio.addEventListener('change', updateDeleteRelationAutocomplete);
-            });
+
+            deleteRelationRadios.forEach(radio => radio.addEventListener('change', updateDeleteRelationAutocomplete));
+            deleteRelActionSubtypeRadios.forEach(radio => radio.addEventListener('change', updateDeleteRelationAutocomplete));
             updateDeleteRelationAutocomplete();
 
             deleteRelationForm.addEventListener('submit', function(e) {
                 e.preventDefault();
                 const formData = new FormData(deleteRelationForm);
-                formData.append('reltype', currentDeleteRelationType);
-                formData.append('source_type', currentDeleteSourceType);
-                formData.append('target_type', currentDeleteTargetType);
+                const [source, rel, target] = document.querySelector('input[name="delete_relation_type"]:checked').value.split('-');
                 
-                fetch('/delete_relationship', {
-                    method: 'POST',
-                    body: formData
-                })
+                let sourceType = source;
+                let targetType = target;
+
+                if (source === 'Action' || target === 'Action') {
+                    const actionSubtype = document.querySelector('input[name="delete_relation_action_subtype"]:checked').value;
+                    if(source === 'Action') sourceType = actionSubtype;
+                    if(target === 'Action') targetType = actionSubtype;
+                }
+
+                formData.append('reltype', rel);
+                formData.append('source_type', sourceType);
+                formData.append('target_type', targetType);
+                
+                fetch('/delete_relationship', { method: 'POST', body: formData })
                 .then(response => response.json())
                 .then(data => {
                     const messageDiv = document.getElementById('delete_relation_message');
@@ -480,48 +580,56 @@
         }
 
         function setupUpdateForm() {
-            const updatePropertyForm = document.getElementById('updatePropertyForm');
-            const updateNodeRadios = document.querySelectorAll('input[name="update_node_type"]');
-            const updateNodeNameInput = document.getElementById('update_node_name');
             const getPropertiesBtn = document.getElementById('get_properties_btn');
+            const updateNodeRadios = document.querySelectorAll('input[name="update_node_type"]');
+            const updateActionSubtypeContainer = document.getElementById('update_action_subtype_container');
+            const updateActionSubtypeRadios = document.querySelectorAll('input[name="update_action_subtype"]');
+            const updateNodeNameInput = document.getElementById('update_node_name');
             const propertiesDisplayArea = document.getElementById('properties_display_area');
+            const updateMessageDiv = document.getElementById('update_message');
             const existingPropertiesContainer = document.getElementById('existing_properties_container');
             const newPropertiesContainer = document.getElementById('new_properties_container');
-            const addPropBtn = document.getElementById('add_new_prop_btn');
-            const updateMessageDiv = document.getElementById('update_message');
-            
-            let currentUpdateNodeType = 'Screen';
-            let currentUpdateNodeName = '';
+            const addNewPropBtn = document.getElementById('add_new_prop_btn');
 
             function updateUpdateFormAutocomplete() {
                 const checkedRadio = document.querySelector('input[name="update_node_type"]:checked');
-                if(!checkedRadio) return;
-                currentUpdateNodeType = checkedRadio.value;
+                if (!checkedRadio) return;
+                
+                let nodeType = checkedRadio.value;
+                updateActionSubtypeContainer.style.display = 'none';
+
+                if (nodeType === 'Action') {
+                    updateActionSubtypeContainer.style.display = 'block';
+                    nodeType = document.querySelector('input[name="update_action_subtype"]:checked').value;
+                }
+
                 updateNodeNameInput.value = '';
                 propertiesDisplayArea.style.display = 'none';
                 updateMessageDiv.textContent = '';
-                setupAutocomplete(updateNodeNameInput, () => allNodes[currentUpdateNodeType.toLowerCase()] || []);
+                setupAutocomplete(updateNodeNameInput, () => allNodes[nodeType.toLowerCase()] || []);
             }
-            updateNodeRadios.forEach(radio => {
-                radio.addEventListener('change', updateUpdateFormAutocomplete);
-            });
+
+            updateNodeRadios.forEach(radio => radio.addEventListener('change', updateUpdateFormAutocomplete));
+            updateActionSubtypeRadios.forEach(radio => radio.addEventListener('change', updateUpdateFormAutocomplete));
             updateUpdateFormAutocomplete();
 
             getPropertiesBtn.addEventListener('click', function() {
-                currentUpdateNodeName = updateNodeNameInput.value;
-                if (!currentUpdateNodeName) {
+                const nodeName = updateNodeNameInput.value;
+                if (!nodeName) {
                     alert('노드 이름을 입력해주세요.');
                     return;
                 }
                 
+                let nodeType = document.querySelector('input[name="update_node_type"]:checked').value;
+                if (nodeType === 'Action') {
+                    nodeType = document.querySelector('input[name="update_action_subtype"]:checked').value;
+                }
+                
                 const formData = new FormData();
-                formData.append('node_type', currentUpdateNodeType);
-                formData.append('node_name', currentUpdateNodeName);
+                formData.append('node_type', nodeType);
+                formData.append('node_name', nodeName);
 
-                fetch('/get_node_properties', {
-                    method: 'POST',
-                    body: formData
-                })
+                fetch('/get_node_properties', { method: 'POST', body: formData })
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
@@ -538,48 +646,33 @@
             function displayProperties(properties) {
                 existingPropertiesContainer.innerHTML = '<h5>기존 속성</h5>';
                 for (const key in properties) {
-                    if (key === 'name') {
-                        const div = document.createElement('div');
-                        div.className = 'input-group mb-2';
-                        div.innerHTML = `
-                            <span class="input-group-text">${key}</span>
-                            <input type="text" class="form-control" value="${properties[key]}" disabled>
-                        `;
-                        existingPropertiesContainer.appendChild(div);
-                    } else {
-                        const propGroup = document.createElement('div');
-                        propGroup.className = 'input-group mb-2 existing-prop-group';
-                        propGroup.innerHTML = `
-                            <input type="text" class="form-control prop-key" value="${key}" disabled>
-                            <input type="text" class="form-control prop-value" value="${properties[key]}">
-                            <button type="button" class="btn btn-danger remove-prop-btn">삭제</button>
-                        `;
-                        existingPropertiesContainer.appendChild(propGroup);
-                        propGroup.querySelector('.remove-prop-btn').addEventListener('click', () => {
-                            const valueInput = propGroup.querySelector('.prop-value');
-                            const button = propGroup.querySelector('.remove-prop-btn');
-                            
-                            if (propGroup.classList.toggle('bg-warning')) {
-                                valueInput.disabled = true;
-                                button.textContent = '복원';
-                                button.classList.remove('btn-danger');
-                                button.classList.add('btn-success');
+                    const isName = key === 'name';
+                    const propGroup = document.createElement('div');
+                    propGroup.className = `input-group mb-2 ${isName ? '' : 'existing-prop-group'}`;
+                    propGroup.innerHTML = `
+                        <input type="text" class="form-control prop-key" value="${key}" disabled>
+                        <input type="text" class="form-control prop-value" value="${properties[key]}" ${isName ? 'disabled' : ''}>
+                        ${isName ? '' : '<button type="button" class="btn btn-danger remove-prop-btn">삭제</button>'}
+                    `;
+                    existingPropertiesContainer.appendChild(propGroup);
+                    if (!isName) {
+                        propGroup.querySelector('.remove-prop-btn').addEventListener('click', function() {
+                             if (propGroup.classList.toggle('bg-warning')) {
+                                this.textContent = '복원';
+                                this.classList.replace('btn-danger', 'btn-success');
+                                propGroup.querySelector('.prop-value').disabled = true;
                             } else {
-                                valueInput.disabled = false;
-                                button.textContent = '삭제';
-                                button.classList.remove('btn-success');
-                                button.classList.add('btn-danger');
+                                this.textContent = '삭제';
+                                this.classList.replace('btn-success', 'btn-danger');
+                                propGroup.querySelector('.prop-value').disabled = false;
                             }
                         });
                     }
                 }
-                
-                // 기존 '새로운 속성' 입력 필드를 모두 제거하고 다시 추가
-                const existingNewProps = newPropertiesContainer.querySelectorAll('.new-prop-group');
-                existingNewProps.forEach(el => el.remove());
+                newPropertiesContainer.querySelectorAll('.new-prop-group').forEach(el => el.remove());
             }
             
-            addPropBtn.addEventListener('click', () => {
+            addNewPropBtn.addEventListener('click', () => {
                 const propGroup = document.createElement('div');
                 propGroup.className = 'input-group mb-2 new-prop-group';
                 propGroup.innerHTML = `
@@ -597,15 +690,11 @@
                 e.preventDefault();
                 const newProps = {};
                 const removeProps = [];
-
-                document.querySelectorAll('.new-prop-group').forEach(group => {
-                    const key = group.querySelector('.new-prop-key').value.trim();
-                    const value = group.querySelector('.new-prop-value').value.trim();
-                    if (key && value) {
-                        newProps[key] = value;
-                    }
-                });
-
+                let nodeType = document.querySelector('input[name="update_node_type"]:checked').value;
+                if (nodeType === 'Action') {
+                    nodeType = document.querySelector('input[name="update_action_subtype"]:checked').value;
+                }
+                
                 document.querySelectorAll('.existing-prop-group').forEach(group => {
                     const key = group.querySelector('.prop-key').value;
                     const value = group.querySelector('.prop-value').value;
@@ -616,53 +705,50 @@
                     }
                 });
 
+                document.querySelectorAll('.new-prop-group').forEach(group => {
+                    const key = group.querySelector('.new-prop-key').value.trim();
+                    const value = group.querySelector('.new-prop-value').value.trim();
+                    if (key && value) newProps[key] = value;
+                });
+                
                 const formData = new FormData();
-                formData.append('node_type', currentUpdateNodeType);
-                formData.append('node_name', currentUpdateNodeName);
+                formData.append('node_type', nodeType);
+                formData.append('node_name', updateNodeNameInput.value);
                 formData.append('new_props', JSON.stringify(newProps));
                 formData.append('remove_props', JSON.stringify(removeProps));
 
-                fetch('/update_node_properties', {
-                    method: 'POST',
-                    body: formData
-                })
+                fetch('/update_node_properties', { method: 'POST', body: formData })
                 .then(response => response.json())
                 .then(data => {
                     updateMessageDiv.className = `mt-3 text-center alert alert-${data.success ? 'success' : 'danger'}`;
                     updateMessageDiv.textContent = data.message;
-                    if(data.success){
+                    if(data.success) {
                         propertiesDisplayArea.style.display = 'none';
-                        updateNodeNameInput.value = '';
-                        refreshNodeList();
                     }
                 });
             });
         }
-
-        function setupAutocomplete(input, getList) {
+        
+        // 자동 완성 함수 (수정 없음)
+        function setupAutocomplete(input, dataProvider) {
             let currentFocus;
-            input.addEventListener('input', function(e) {
-                const val = this.value;
+            input.addEventListener('input', function (e) {
+                let a, b, i, val = this.value;
                 closeAllLists();
                 if (!val) { return false; }
                 currentFocus = -1;
-                const a = document.createElement('div');
+                a = document.createElement('div');
                 a.setAttribute('id', this.id + 'autocomplete-list');
                 a.setAttribute('class', 'autocomplete-items');
                 this.parentNode.appendChild(a);
-
-                const list = getList();
-                for (const item of list) {
-                    if (item.toUpperCase().includes(val.toUpperCase())) {
-                        const b = document.createElement('div');
-                        const index = item.toUpperCase().indexOf(val.toUpperCase());
-                        const matchedPart = item.substr(index, val.length);
-                        const before = item.substr(0, index);
-                        const after = item.substr(index + val.length);
-                        
-                        b.innerHTML = `${before}<strong>${matchedPart}</strong>${after}`;
-                        b.innerHTML += `<input type='hidden' value='${item}'>`;
-                        b.addEventListener('click', function(e) {
+                const arr = dataProvider();
+                for (i = 0; i < arr.length; i++) {
+                    if (arr[i].substr(0, val.length).toUpperCase() == val.toUpperCase()) {
+                        b = document.createElement('div');
+                        b.innerHTML = "<strong>" + arr[i].substr(0, val.length) + "</strong>";
+                        b.innerHTML += arr[i].substr(val.length);
+                        b.innerHTML += "<input type='hidden' value='" + arr[i] + "'>";
+                        b.addEventListener('click', function (e) {
                             input.value = this.getElementsByTagName('input')[0].value;
                             closeAllLists();
                         });
@@ -670,22 +756,12 @@
                     }
                 }
             });
-
-            input.addEventListener('keydown', function(e) {
+            input.addEventListener('keydown', function (e) {
                 let x = document.getElementById(this.id + 'autocomplete-list');
                 if (x) x = x.getElementsByTagName('div');
-                if (e.keyCode == 40) { // DOWN key
-                    currentFocus++;
-                    addActive(x);
-                } else if (e.keyCode == 38) { // UP key
-                    currentFocus--;
-                    addActive(x);
-                } else if (e.keyCode == 13) { // ENTER key
-                    e.preventDefault();
-                    if (currentFocus > -1) {
-                        if (x) x[currentFocus].click();
-                    }
-                }
+                if (e.keyCode == 40) { currentFocus++; addActive(x); }
+                else if (e.keyCode == 38) { currentFocus--; addActive(x); }
+                else if (e.keyCode == 13) { e.preventDefault(); if (currentFocus > -1) { if (x) x[currentFocus].click(); } }
             });
 
             function addActive(x) {

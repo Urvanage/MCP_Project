@@ -1,9 +1,12 @@
 Node Types
-- Screen: 하나의 화면을 의미. 예: "Home", "WiFiPopup"
-- UIElement: 클릭 가능한 버튼, 아이콘 등. 예: "Connection Icon", "Wi-Fi Option"
-- Action: 클릭, 스크롤 등 UIElement가 트리거하는 사용자 행위
+- Screen: 애플리케이션의 개별 화면 또는 뷰(View). 예: "HomeScreen", "WiFiPopup"
+- UIElement: 화면 내에서 사용자와 상호작용하는 모든 시각적 요소(버튼, 아이콘 등). 예: "ConnectionIcon", "Wi-Fi Option"
+- Tap: 사용자의 '탭' 또는 '클릭' 행위를 모델링한 노드
+- Hold: 사용자의 '길게 누르기(Hold)' 행위를 모델링한 노드
 
 Relationship Types
-- (:Screen)-[:CONTAINS]->(:UIElement): 특정 화면이 UI 요소 포함
-- (:UIElement)-[:TRIGGERS]->(:Action): UI 요소 클릭 시 액션 실행
-- (:Action)-[:LEADS_TO]->(:Screen): 액션 실행 시 화면 이동
+- (:Screen)-[:CONTAINS]->(:UIElement): 특정 화면이 어떤 UI 요소를 포함하고 있는지 나타낸다.
+- (:UIElement)-[:TRIGGERS]->(:Tap): UI 요소를 탭했을 때 특정 Tap 행위가 발생한다
+- (:UIElement)-[:TRIGGERS]->(:Hold): UI 요소를 길게 눌렀을 때 특정 Hold 행위가 발생한다
+- (:Tap)-[:LEADS_TO]->(:Screen): Tap 행위가 어떤 화면으로의 전환을 유발하는지 나타낸다.
+- (:Hold)-[:LEADS_TO]->(:Screen): Hold 행위가 어떤 화면으로의 전환을 유발하는지 나타낸다.

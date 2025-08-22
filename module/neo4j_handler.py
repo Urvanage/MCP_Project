@@ -66,7 +66,7 @@ class Neo4jHandler:
         ui_name = result['name']
 
         trigger_query = """
-        MATCH (u:UIElement {name: $ui_name})-[:TRIGGERS]->(a:Action)-[:LEADS_TO]-(s:Screen)
+        MATCH (u:UIElement {name: $ui_name})-[:TRIGGERS]->(a:Tap|Hold)-[:LEADS_TO]-(s:Screen)
         RETURN a.name AS action_name, s.name AS screen_name
         LIMIT 1
         """

@@ -2,6 +2,8 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from pathlib import Path
+from dotenv import load_dotenv
+import os
 
 """
 Canonical Mapper 에서 알아낸 UI element에 대해서 현재 화면 혹은 
@@ -12,10 +14,25 @@ update_last_clicked_screen 사용 시 Screen을 시작점으로 사용
 generate 을 통해 호출
 """
 
+load_dotenv()
+api_key= os.getenv("OPENAI_API_KEY")
+
+llm = ChatOpenAI(
+    model="gpt-5",
+    use_responses_api=True,
+    output_version="responses/v1",
+    extra_body={
+        "text":{"verbosity":"low"},
+        "reasoning":{"effort":"low"},
+    },
+    api_key=api_key
+)
+
+
 class LLMCypherGenerator:
     def __init__(self, graph_path, model=None, initial_last_clicked_ui=None, initial_screen=None):
         self.graph_path = graph_path
-        self.llm = model or ChatOpenAI(model="gpt-4o")
+        self.llm = llm
         self.prompt_template = ChatPromptTemplate.from_template(self._build_prompt_template())
         self.output_parser = StrOutputParser()
         self.last_clicked_ui = initial_last_clicked_ui
@@ -120,5 +137,20 @@ ORDER BY apoc.coll.indexOf(nodes(path), n)
 """
             return initialCypher
 
-        chain = self.prompt_template | self.llm | self.output_parser
-        return chain.invoke(context).strip()
+        chain = self.prompt_template | self.llm
+        response = chain.invoke(context)
+
+        if isinstance(response, dict) and "messages" in response:
+            messages = response["messages"]
+            if isinstance(messages, list):
+                text_content = "".join(
+                    part.get("text", "")
+                    for msg in messages
+                    for part in msg.get("content", [])
+                )
+            else:
+                text_content = str(messages)
+        else:
+            text_content = str(response)
+
+        return text_content.strip()

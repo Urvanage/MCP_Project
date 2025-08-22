@@ -44,9 +44,9 @@ Based on the provided manual context and user query, generate a concise and acti
 Conty is always assumed to be already running.
 
 Each step in your JSON array must contain the following keys. Adhere strictly to this format:
-- "action": a short verb describing the user's interaction (e.g., "Input", "Click", "Observe")
+- "action": a short verb describing the user's interaction (e.g., "Input", "Click")
 - "description": a clear and concise explanation of what the user should do
-- "expected_result": (optional) what should be observed or expected after performing the action, if applicable
+- "expected_result": what should be observed or expected after performing the action, if applicable
             """
         ),
         base.UserMessage(message),

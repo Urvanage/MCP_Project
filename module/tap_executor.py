@@ -82,3 +82,43 @@ class TapExecutor:
             last_tapped_item = item #마지막으로 탭한 UI
         
         return last_tapped_item
+    
+    def hold(self, tap_sequence, avoid=None):
+        tap_sequence = self._normalize(tap_sequence)
+        last_tapped_item = None
+        skip = False
+        avoid = self.avoid
+
+        if len(tap_sequence) == 0:
+            return False
+        
+        if avoid is not None:
+            first_item_name = tap_sequence[0].get('name')
+            if first_item_name == avoid.get('name'):
+                skip = True
+
+        for idx, item in enumerate(tap_sequence):
+            if skip:
+                skip = False
+                continue
+
+            name = item.get('name', 'Unknown')
+            x = item.get('x')
+            y = item.get('y')
+
+            if x is None or y is None:
+                print(f"Skipping {name} due to missing coordinates.")
+                continue
+
+            if idx == len(tap_sequence)-1:
+                print(f"Holding {name} at ({x}, {y}) for 10 seconds...")
+                cmd = f"adb shell input swipe {x} {y} {x} {y} 10000"
+            else:
+                print(f"Tapping {name} at ({x}, {y})...")
+                cmd = f"adb shell input tap {x} {y}"
+
+            subprocess.run(cmd, shell=True)
+            time.sleep(0.5)
+            last_tapped_item = item
+
+        return last_tapped_item
