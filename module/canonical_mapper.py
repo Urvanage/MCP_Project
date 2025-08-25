@@ -105,13 +105,29 @@ Return your answer in JSON format, like this:
 
 # For testing purpose
 """
-can = LLMCanonicalMapper(
+mapper = LLMCanonicalMapper(
     alias_path="resource/ui_alias.json",
     graph_path="resource/graph_structure.txt",
     model=llm
 )
 
-res = can.resolve("(Hold) Press and hold the '입력 위치로 이동' (Move to Target Position) button.","지정 위치 이동에서 홈 위치 선택 후 누르는동안 타겟 위치로 이동 버튼을 누르는 동안 설정된 위치로 이동하는지 확인", "Home", "Robot will be in Home Position.")
-print(f"반환된 타입: {type(res)}")
-print(f"Canonical Name: {res['canonical_name']}")
+result1 = mapper.resolve(
+    "Click the Program Button", 
+    "Make the Program", 
+    "Home", 
+    "Program Screen appears."
+)
+result2 = mapper.resolve(
+    "Click the Program Button", 
+    "Make the Program", 
+    "Move", 
+    "Program Screen appears."
+)
+
+print(result1)
+print(result2)
 """
+
+#res = can.resolve("(Hold) Press and hold the '입력 위치로 이동' (Move to Target Position) button.","지정 위치 이동에서 홈 위치 선택 후 누르는동안 타겟 위치로 이동 버튼을 누르는 동안 설정된 위치로 이동하는지 확인", "Home", "Robot will be in Home Position.")
+#print(f"반환된 타입: {type(res)}")
+#print(f"Canonical Name: {res['canonical_name']}")

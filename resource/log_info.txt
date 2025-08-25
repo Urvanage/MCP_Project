@@ -1,2 +1,0 @@
-08-22 14:32:38.477 I/Unity   ( 3189): Toast.Show : Conty와 로봇을 연결 후, 다시 시도해주세요.
-08-22 14:43:33.879 I/Unity   ( 4286): StartFragment : run
