@@ -12,7 +12,7 @@ from langchain_community.vectorstores import FAISS
 from dotenv import load_dotenv
 import os
 import asyncio
-from module.image_comparator import ImageComparator
+from module.screen_checker import ScreenChecker
 from module.log_monitor import InMemoryLogMonitor
 from module.step_executor import StepExecutor
 import csv
@@ -246,7 +246,11 @@ async def run():
             #    test_screen, user_input = testList[i]
             ########################################################
             
-            start_point = ImageComparator().check_current_screen()
+            start_point = ScreenChecker().check_current_screen()
+            if start_point == "fail":
+                ScreenChecker().move_to_home()
+                start_point="Home"
+            
             user_input += f"현재 화면은 {start_point}입니다."
             
             prompts = await load_mcp_prompt(
