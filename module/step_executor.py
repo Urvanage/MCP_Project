@@ -1,12 +1,14 @@
-import asyncio
 from module.log_monitor import *
 from module.canonical_mapper import *
 from module.cypher_generator import *
 from module.neo4j_handler import *
 from module.tap_executor import *
 from action_mcp_client import run_action_agent
-from verify_mcp_client import run_verify_agent, run_analysis_agent
+from verify_mcp_client import run_verify_agent
 
+load_dotenv()
+
+# LLM 응답에서 JSON 블록을 안전하게 추출
 def extract_json_from_response(raw_text: str) -> dict:
     pattern = r"```json\n(.*?)\n```"
     match = re.search(pattern, raw_text, re.DOTALL)
@@ -23,30 +25,33 @@ def extract_json_from_response(raw_text: str) -> dict:
 
 class StepExecutor:
     def __init__(self, monitor: InMemoryLogMonitor, user_input = None,start_point=None):
+        # 로그 모니터, canonical mapper, Neo4j handler, TapExecutor 초기화
         self.monitor = monitor
         self.mapper = LLMCanonicalMapper(
             alias_path="resource/ui_alias.json",
             graph_path="resource/graph_structure.txt"
         )
-        self.start_point = None or start_point
-        self.user_input = None or user_input
-        self.isScreen = False
-        self.neo4j = Neo4jHandler(
-            uri="bolt://localhost:7687",
-            user="neo4j",
-            password="neo4jneo4j",
+        self.start_point = None or start_point # 현재 시작 위치(UI 또는 화면)
+        self.user_input = None or user_input # 사용자 입력
+        self.isScreen = False # start_point가 화면인지 여부
+        self.neo4j = Neo4jHandler( # Neo4j 연결 초기화
+            uri=os.getenv("NEO4J_URI"),
+            user=os.getenv("NEO4J_USER"),
+            password=os.getenv("NEO4J_PASSWORD"),
             cypher=""
         )
-        self.tap_executor = TapExecutor()
-        self.step_passed = True
+        self.tap_executor = TapExecutor() # ADB 탭/홀드 실행기
+        self.step_passed = True # step 성공 여부 초기화
     
-
+    # 로그 모니터 시작 시간 설정
     def setMonitorTime(self):
         self.monitor.setTime()
 
+    # 현재 step 성공 여부 초기화
     def resetState(self):
         self.step_passed=True
 
+    # 테스트 시작 화면 설정
     def setStartScreen(self, start_point):
         self.start_point = {
             "name": start_point,
@@ -62,9 +67,11 @@ class StepExecutor:
         else:
             self.generator.update_last_clicked_screen(start_point)
 
+    # 테스트 시작 화면으로 이동
     def return_to_testScreen(self, testScreen):
-        #print("RETURN TO TESTSCREEN")
         finished_place = self.start_point.get("name")
+
+        # 현재 위치의 Label 확인
         checkUIElementQuery = f"""
         MATCH (n {{name: "{finished_place}"}})
         RETURN head(labels(n)) AS label
@@ -74,8 +81,7 @@ class StepExecutor:
         query_result1, error = self.neo4j.execute_cypher()
         query_result1 = query_result1[0][0]
 
-        #print(finished_place," ", query_result1)
-
+        # UIElement인 경우, testScreen과 포함 관계 확인
         if query_result1 == "UIElement":
             checkContainQuery = f"""
             MATCH (s:Screen {{name: "{testScreen}"}}), (e:UIElement {{name: "{finished_place}"}})
@@ -89,6 +95,7 @@ class StepExecutor:
                 self.tap_executor.tap_middle()
                 return
         
+        # UIElement -> Screen 최단경로 계산
         stepFin_Cypher = f"""
             MATCH (start:{query_result1} {{name: "{finished_place}"}})
             MATCH (target:Screen {{name: "{testScreen}"}})
@@ -102,19 +109,23 @@ class StepExecutor:
         self.neo4j.cypher = stepFin_Cypher
         query_result3, error = self.neo4j.execute_cypher()
 
+        # TapExecutor를 통해 화면 이동
         tap_result = self.tap_executor.tap(query_result3)
         if tap_result == False:
                 self.tap_executor.tap_middle()
                 return
 
+        # start_point 갱신
         self.start_point = tap_result
         screen_name = self._update_start_point_from_ui(tap_result)
         self.tap_executor.tap_middle()
         
+    # 현재 화면과 테스트 시작 화면이 다른 경우, 테스트 시작 화면으로 이동
     def generate_step0(self, fromScreen, toScreen):
         toCheck = ""
 
         if toScreen == "Home":
+            # 앱 종료 후 재실행
             print("Shutting down the app")
             cmd = "adb shell am force-stop com.neuromeka.conty3"
             subprocess.run(cmd, shell=True)
@@ -137,6 +148,7 @@ class StepExecutor:
         else:
             toCheck = toScreen.lower()
 
+        # Neo4j shortestPath 쿼리 생성
         step0_Cypher = f"""
             MATCH (start:Screen {{name: "{fromScreen}"}})
             MATCH (target:Screen {{name: "{toScreen}"}})
@@ -157,6 +169,7 @@ class StepExecutor:
         else:
             self.neo4j.cypher = step0_Cypher
 
+        # Cypher 실행
         query_result, error = self.neo4j.execute_cypher()
         if query_result:
             self.tap_executor = TapExecutor()
@@ -178,7 +191,8 @@ class StepExecutor:
                     )
                 else:
                     self.generator.update_last_clicked_screen(toScreen)
-            
+
+    # 현재 시작점 반환       
     def get_startPoint(self):
         startPoint = self.start_point
         if startPoint == None:
@@ -186,11 +200,13 @@ class StepExecutor:
         else:
             return startPoint.get("name")
 
+    # 마지막으로 실행한 step의 결과 반환
     def get_finalResult(self):
         finalResult = self.total_result
         self.total_result = {}
         return finalResult
 
+    # Neo4j 연결 종료
     def __del__(self):
         if hasattr(self, "neo4j") and self.neo4j:
             try:
@@ -198,13 +214,14 @@ class StepExecutor:
             except Exception as e:
                 print(f"[WARN] Failed to close neo4j in destructor: {e}")
 
+    # Observation 수행
     async def _observate_result(self, step, expected_result):
         print("\n==== Observation ====")
         print(f"Expected Result: {expected_result}")
         self.monitor.save_log()
         time.sleep(1)
 
-        # Verify MCP 에이전트로부터 결과와 이유를 받음
+        # Verify MCP 에이전트 실행
         res, reason = await run_verify_agent(step, expected_result)
         if res=="Error":
             print("[ERROR] Observation Error Occurred")
@@ -218,6 +235,7 @@ class StepExecutor:
 
         self.monitor.setTime()
 
+    # Cypher 실행 후 실패 시 LLM으로 재생성
     def _run_cypher_with_retry(self, canonical_name):
         max_retries = 5
         previous_failed_queries = []
@@ -242,6 +260,7 @@ class StepExecutor:
         print("[FAIL] Maximum retries reached without success.")
         return False
 
+    # UI 클릭 후 start_point 업데이트
     def _update_start_point_from_ui(self, ui_name):
         check = self.neo4j.check_trigger(ui_name)
         if check == None:
@@ -261,24 +280,23 @@ class StepExecutor:
         
         return screen_name
 
+    # 단일 Step 실행
     async def run_step(self, step: str, expected_result: str):
         if self.step_passed == False:
             return 
         
         self.step = step
-        print(f"From [run_step] | Starting Point : {self.start_point}")
-        #print(self.monitor.get_logs())
 
         canonical_place = self.start_point.get("name")
         if self.isScreen == False:
             canonical_place= self.neo4j.get_current_screen(canonical_place)
 
+        # canonical name, action_type, action_data, expected_result 확인
         result = self.mapper.resolve(step, self.user_input,canonical_place, expected_result)
         resolved_instr= result
         print(resolved_instr)
         
         print(f"==== Current STEP ====\n{step}")
-
         canonical_name = resolved_instr.get("canonical_name")
         action_type = resolved_instr.get("action_type")
         action_data = resolved_instr.get("action_data")
@@ -292,10 +310,9 @@ class StepExecutor:
                 initial_last_clicked_ui=self.start_point
             )
 
+        # Cypher 생성 및 실행
         cypher_query = self.generator.generate(canonical_name)
-            
-        print("Initial Cypher Query: \n", cypher_query)
-        
+                    
         if not hasattr(self, "neo4j") or self.neo4j is None:
             self.neo4j = Neo4jHandler(
                 uri="bolt://localhost:7687",
@@ -312,6 +329,7 @@ class StepExecutor:
             self.neo4j.close()
             return
         
+        # TapExecutor 실행
         avoid = None or self.start_point
         self.tap_executor = TapExecutor(avoid=avoid)
 
@@ -323,9 +341,11 @@ class StepExecutor:
         if tap_result is False:
             return
         
+        # start_point 및 화면 갱신
         self.start_point = tap_result
         screen_name = self._update_start_point_from_ui(tap_result)
 
+        # 추가 action 필요 시 MCP 호출
         if action_type not in ["tap", "hold"]:
             print("[INFO] Additional action required, calling action_mcp client...")
             ui_name = await run_action_agent(screen_name, step)
@@ -336,48 +356,5 @@ class StepExecutor:
             }
             screen_name = self._update_start_point_from_ui(self.start_point)
 
-        """
-        avoid = None or self.start_point
-        self.tap_executor = TapExecutor(avoid=avoid)
-        tap_result = self.tap_executor.tap(query_result)
-        if tap_result == False:
-            return
-        
-        self.start_point = tap_result
-        screen_name = self._update_start_point_from_ui(tap_result)
-
-        if action_type == "tap":
-            # 단순 tap 액션
-            pass
-        elif action_type == "pinch":
-            # pinch 액션
-            pass
-        elif action_type == "hold":
-            # hold 하는 액션 => Robot에서 정보 가져오기 필요함
-            pass
-        else:
-            # 이외의 추가적인 action을 해야함.
-            print("[INFO] Additional action required, calling action_mcp client...")
-            ui_name = await run_action_agent(screen_name, step)
-
-            self.start_point = {
-                "name": ui_name,
-                "x": None,
-                "y": None
-            }
-            screen_name = self._update_start_point_from_ui(self.start_point)
-        """
-            
-
+        # Observation 수행
         await self._observate_result(step, expected_result)     
-
-        """
-        # 실패한 경우에, 무엇 때문에 실패했는지 분석해보려 했지만 아직은 정보가 더 필요한 것 같음.
-        if self.step_passed == False:
-            reason, recomm = await run_analysis_agent(step, expected_result, action_type, canonical_name)
-            if reason != "Error":
-                print("==== Analysis ====")
-                print(f"Failure Reason: {reason}\nRecommend action: {recomm}")
-        else:
-            print("[ERROR] Analysis Error Occurred")
-        """

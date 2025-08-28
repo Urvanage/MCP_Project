@@ -8,15 +8,16 @@ import json
 import os
 
 """ 
-step 정보가 들어오면, 매뉴얼을 기반으로 step에 대해서
-클릭해야할 UI element 하나의 정보를 반환한다.
-
-resolve 를 통해 호출한다.
+이 모듈은 사용자로부터 전달된 step 정보를 바탕으로,
+매뉴얼과 UI alias, 그래프 구조를 참고하여 해당 step에
+해당하는 클릭할 UI element 정보를 반환하는 기능을 제공합니다.
 """
 
+# .env 파일에서 환경변수 불러오기
 load_dotenv()
 api_key= os.getenv("OPENAI_API_KEY")
 
+# GPT-5 LLM 초기화
 llm = ChatOpenAI(
     model="gpt-5",
     use_responses_api=True,
@@ -29,6 +30,13 @@ llm = ChatOpenAI(
 )
 
 class LLMCanonicalMapper:
+    """
+    LLMCanonicalMapper 클래스
+    - alias_path: UI alias JSON 파일 경로
+    - graph_path: Neo4j 그래프 정보를 담은 파일 경로
+    - model: LLM 객체
+    """
+
     def __init__(self, alias_path, graph_path, model=None):
         self.alias_path = alias_path
         self.graph_path = graph_path
@@ -36,6 +44,7 @@ class LLMCanonicalMapper:
         self.prompt_template = ChatPromptTemplate.from_template(self._build_prompt_template())
         self.output_parser = JsonOutputParser()
 
+    # LLM에게 전달할 프롬프트
     def _build_prompt_template(self):
         return """You are given a user instruction step and a set of canonical UI elements with their aliases and types.
 
@@ -82,6 +91,12 @@ Return your answer in JSON format, like this:
         return Path(path).read_text(encoding='utf-8')
 
     def resolve(self, step_text: str, user_input: str, current_screen: str, expected_result: str) -> str:
+        """
+        주어진 step 정보를 바탕으로
+        - alias JSON과 graph 구조를 읽고
+        - alias 문자열 포맷으로 변환
+        - LLM에 프롬프트를 전달하여 결과를 JSON으로 반환
+        """
         alias_data = json.loads(Path(self.alias_path).read_text(encoding='utf-8'))
         graph_structure = self._load_text(self.graph_path)
 
@@ -102,32 +117,3 @@ Return your answer in JSON format, like this:
             "current_screen": current_screen.strip(),
             "expected_result": expected_result.strip()
         })
-
-# For testing purpose
-"""
-mapper = LLMCanonicalMapper(
-    alias_path="resource/ui_alias.json",
-    graph_path="resource/graph_structure.txt",
-    model=llm
-)
-
-result1 = mapper.resolve(
-    "Click the Program Button", 
-    "Make the Program", 
-    "Home", 
-    "Program Screen appears."
-)
-result2 = mapper.resolve(
-    "Click the Program Button", 
-    "Make the Program", 
-    "Move", 
-    "Program Screen appears."
-)
-
-print(result1)
-print(result2)
-"""
-
-#res = can.resolve("(Hold) Press and hold the '입력 위치로 이동' (Move to Target Position) button.","지정 위치 이동에서 홈 위치 선택 후 누르는동안 타겟 위치로 이동 버튼을 누르는 동안 설정된 위치로 이동하는지 확인", "Home", "Robot will be in Home Position.")
-#print(f"반환된 타입: {type(res)}")
-#print(f"Canonical Name: {res['canonical_name']}")

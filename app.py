@@ -3,8 +3,10 @@ from module.neo4j_handler import *
 import json
 import os
 
+# Flask 앱 생성
 app = Flask(__name__)
 
+# Neo4jHandler 초기화
 n4 = Neo4jHandler(
     uri=os.getenv("NEO4J_URI"),
     user=os.getenv("NEO4J_USER"),
@@ -15,6 +17,7 @@ n4 = Neo4jHandler(
 json_file = "resource/ui_alias.json"
 data = {}
 
+# 노드 존재 여부 확인
 def check_if_exist(node, name):
     checking_cypher = f"""
     MATCH (n:{node} {{name: "{name}"}})
@@ -24,6 +27,7 @@ def check_if_exist(node, name):
     result, error = n4.execute_cypher()
     return result is not None and len(result) > 0
 
+# Neo4j 노드 생성 / 업데이트
 def update_neo4j(node, name, properties=None):
     props = [f'name: "{name}"']
     if properties:
@@ -38,6 +42,7 @@ def update_neo4j(node, name, properties=None):
     result, error = n4.execute_cypher()
     return not error
 
+# Neo4j에서 Tap, Hold, Screen, UIElement 목록 가져오기
 def get_list():
     cyphers = {
         "tap": "MATCH (n:Tap) RETURN n.name",
@@ -55,6 +60,7 @@ def get_list():
             lists[key] = [item[0] for item in result]
     return lists["tap"], lists["hold"], lists["screen"], lists["uielement"]
 
+# UI alias 삭제
 def delete_ui_alias(name, type):
     global data
     if os.path.exists(json_file):
@@ -70,6 +76,7 @@ def delete_ui_alias(name, type):
         return True
     return False
 
+# Neo4j 노드 삭제
 def delete_node(node_name, node_type):
     if check_if_exist(node_type, node_name) == False:
         return False, f"[실패] {node_type}('{node_name}') 노드는 존재하지 않습니다."
@@ -88,6 +95,7 @@ def delete_node(node_name, node_type):
     message = f"노드 '{node_name}' 및 연결된 모든 관계가 성공적으로 삭제되었습니다."
     return True, message
 
+# Neo4j 관계 삭제
 def delete_relationship(reltype, n1name, n1type, n2name, n2type):
     deleting_relationship_cypher = f"""
     MATCH (a:{n1type} {{name: "{n1name}"}})-[r:{reltype}]->(b:{n2type} {{name: "{n2name}"}})
@@ -110,6 +118,7 @@ def delete_relationship(reltype, n1name, n1type, n2name, n2type):
     else:
         return False, "[실패] 관계가 존재하지 않거나 예상치 못한 결과 형식입니다."
 
+# 노드 속성 조회
 def get_node_properties(node_name, node_type):
     property_cypher = f"""
     MATCH (n:{node_type} {{name:"{node_name}"}})
@@ -121,6 +130,9 @@ def get_node_properties(node_name, node_type):
         return None
     return res[0][0]
 
+# 노드 속성 업데이트
+# - new_props: 업데이트할 속성
+# - remove_props: 제거할 속성
 def update_node_properties(node_name, node_type, new_props, remove_props):
     set_clauses = []
     remove_clauses = []
@@ -156,10 +168,16 @@ def update_node_properties(node_name, node_type, new_props, remove_props):
     else:
         return True, f"노드 '{node_name}'의 속성이 성공적으로 업데이트되었습니다."
 
+# =========================================================
+# Flask 라우트 정의
+# =========================================================
+
+# 메인 페이지
 @app.route('/')
 def index():
     return render_template('index.html')
 
+# 노드 생성
 @app.route('/create_node', methods=['POST'])
 def create_node_web():
     global data
@@ -175,6 +193,7 @@ def create_node_web():
     if node_type == "Action": # Action 타입 선택 시 하위 타입 사용
         node_type = request.form['action_subtype']
 
+    # 이미 존재하면 생성 불가
     if check_if_exist(node_type, node_name):
         return jsonify({"success": False, "message": f"'{node_name}' ({node_type}) 노드가 이미 존재합니다."})
 
@@ -197,6 +216,7 @@ def create_node_web():
     else:
         return jsonify({"success": False, "message": "Neo4j 노드 생성 중 오류가 발생했습니다."})
 
+# 관계 생성
 @app.route('/create_relation', methods=['POST'])
 def create_relation_web():
     source_type = request.form['source_type']
@@ -207,13 +227,14 @@ def create_relation_web():
     if not check_if_exist(source_type, source_name):
         return jsonify({"success": False, "message": f"오류: 시작 노드 '{source_name}' ({source_type})가 존재하지 않습니다."})
 
-    # 타겟이 Tap 또는 Hold이고 존재하지 않으면 생성
+    # Tap/Hold 관계 노드 없으면 생성
     if target_type in ["Tap", "Hold"]:
         if not check_if_exist(target_type, target_name):
             update_neo4j(target_type, target_name)
     elif not check_if_exist(target_type, target_name):
         return jsonify({"success": False, "message": f"오류: 대상 노드 '{target_name}' ({target_type})가 존재하지 않습니다."})
 
+    # 관계 타입 자동 결정
     relation_type = None
     if source_type == "Screen" and target_type == "UIElement":
         relation_type = "CONTAINS"
@@ -236,6 +257,7 @@ def create_relation_web():
     else:
         return jsonify({"success": True, "message": f"'{source_name}' -[:{relation_type}]-> '{target_name}' 관계가 정상적으로 생성됨"})
 
+# 노드 삭제
 @app.route('/delete_node', methods=['POST'])
 def delete_node_web():
     node_type = request.form['node_type']
@@ -248,6 +270,7 @@ def delete_node_web():
     
     return jsonify({"success": success, "message": message})
 
+# 관계 삭제
 @app.route('/delete_relationship', methods=['POST'])
 def delete_relationship_web():
     reltype = request.form['reltype']
@@ -260,6 +283,7 @@ def delete_relationship_web():
 
     return jsonify({"success": success, "message": message})
 
+# 노드 목록 조회
 @app.route('/get_nodes', methods=['GET'])
 def get_nodes_api():
     tap_list, hold_list, screen_list, uielement_list = get_list()
@@ -270,6 +294,7 @@ def get_nodes_api():
         "uielement": uielement_list
     })
 
+# 노드 속성 조회
 @app.route('/get_node_properties', methods=['POST'])
 def get_node_properties_web():
     node_type = request.form['node_type']
@@ -284,6 +309,7 @@ def get_node_properties_web():
     else:
         return jsonify({"success": False, "message": "노드 속성을 가져오는 중 오류가 발생했습니다."})
 
+# 노드 속성 업데이트
 @app.route('/update_node_properties', methods=['POST'])
 def update_node_properties_web():
     node_type = request.form['node_type']
@@ -298,6 +324,7 @@ def update_node_properties_web():
     
     return jsonify({"success": success, "message": message})
 
+# Flask 앱 실행
 if __name__ == '__main__':
     if os.path.exists(json_file):
         with open(json_file, "r", encoding="utf-8") as f:

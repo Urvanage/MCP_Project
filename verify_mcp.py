@@ -1,43 +1,22 @@
-import json
 from dataclasses import dataclass
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.prompts import base
 from dotenv import load_dotenv
-import openai
 import os
-from typing import List
-from langchain_openai import OpenAIEmbeddings
-from langchain_community.vectorstores import FAISS
-import pandas as pd
-import csv
-from collections import defaultdict
 import subprocess
 import base64
-import cv2
-from typing import Dict, Any
 from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
-from langchain_core.output_parsers import StrOutputParser
 from dotenv import load_dotenv
 import os
 from pathlib import Path
-from langchain_core.messages import HumanMessage, AIMessage
+from langchain_core.messages import HumanMessage
 from fastmcp import Context
 
-"""
-import logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    filename='debug.log',  # 로그를 기록할 파일 이름
-    filemode='a',  # 'w'는 덮어쓰기, 'a'는 이어쓰기
-    encoding='utf-8'
-)
-"""
-
+# 환경 변수 로드 
 load_dotenv()
 api_key = os.getenv("OPENAI_API_KEY")
 
+# LLM 모델 초기화 (GPT-5)
 model = ChatOpenAI(
     model="gpt-5",
     use_responses_api=True,
@@ -49,8 +28,17 @@ model = ChatOpenAI(
     api_key=api_key 
 )
 
+# =========================================================
+# FastMCP 서버 초기화
+# - VerifyMCP: UI 상태 및 로그 기반 검증용
+# =========================================================
 mcp = FastMCP("VerifyMCP", instructions="Observe the current state and determine if the previous task was completed successfully.")
 
+# =========================================================
+# ADB 스크린샷 캡처 함수
+# - filename: 로컬 저장 파일명
+# - adb shell screencap -> adb pull
+# =========================================================
 def capture_adb_screen_image(filename: str = "screen.png") -> Path:
     try:
         subprocess.run("adb shell screencap -p /sdcard/screen.png", shell=True, check=True)
@@ -60,14 +48,23 @@ def capture_adb_screen_image(filename: str = "screen.png") -> Path:
         print(f"[ERROR] {e}")
         return None
 
+# =========================================================
+# 이미지 파일을 Base64 문자열로 인코딩
+# =========================================================
 def encode_image_to_base64(image_path: Path) -> str:
     with open(image_path, "rb") as image_file:
         return base64.b64encode(image_file.read()).decode('utf-8')
 
+# =========================================================
+# LLM을 이용한 화면 상태 질의
+# - question: 화면 이미지에 대해 LLM에게 물어볼 질문
+# - 화면 분석 규칙 포함 (라디오 버튼, 연결 아이콘 등)
+# =========================================================
 def query_screen_with_llm(image_path: Path, question: str) -> str:
     if not image_path or not image_path.exists():
         raise RuntimeError("Image file does not exist.")
 
+    # 화면 분석 규칙 설명
     descriptive_prompt = (
         "You are a precise UI analyst. You must follow this rule to determine the state of radio buttons:\n"
         "First, describe everything you see in the current screen in detail. "
@@ -75,21 +72,23 @@ def query_screen_with_llm(image_path: Path, question: str) -> str:
         "When checking the IP connection, determine it as connected if the connection icon is green, not the Wi-Fi icon.\n\n"
     )
     
-    # 두 프롬프트를 하나로 합칩니다.
+    # 최종 질문 구성
     final_question = descriptive_prompt + question
 
     base64_image = encode_image_to_base64(image_path)
     image_url = f"data:image/png;base64,{base64_image}"
 
+    # LLM용 HumanMessage 구성
     msg = HumanMessage(content=[
         {"type": "text", "text": final_question},
         {"type": "image_url", "image_url": {"url": image_url}},
     ])
 
+    # LLM 호출
     llm = model
     res = llm.invoke([msg])
 
-    # 응답 처리
+    # 응답 처리: text 형태로 반환
     if isinstance(res.content, list):
         for item in res.content:
             if isinstance(item, dict) and item.get('type') == 'text':
@@ -99,6 +98,10 @@ def query_screen_with_llm(image_path: Path, question: str) -> str:
 
     return "No valid text content found in the response."
 
+# =========================================================
+# 로그 읽기
+# - resource/log_info.txt에서 읽어옴
+# =========================================================
 def get_log():
     file_path = os.path.join('resource', 'log_info.txt')
     try:
@@ -110,6 +113,12 @@ def get_log():
     except IOError as e:
         return f"파일을 읽는 중 오류가 발생했습니다: {e}"
 
+# =========================================================
+# FastMCP Tool: adb_screen_vlm
+# - 화면 캡처 후 LLM을 통해 질문 응답
+# - question: "현재 화면에서 xxx가 보이나요?" 등
+# - 반환: {"success": bool, "answer": str}
+# =========================================================
 @mcp.tool()
 async def adb_screen_vlm(ctx: Context, question: str) -> dict:
     """
@@ -119,9 +128,6 @@ async def adb_screen_vlm(ctx: Context, question: str) -> dict:
     Returns:
         dict: {"success": bool, "answer": str}
     """
-    #logging.info(f"🕵️‍♂️ 'adb_screen_vlm' tool called with question: {question}")
-    #question += "어떤 요소가 선택되었는지 판단하는 경우, 바로 옆의 라디오 버튼이 활성화 되어있다면 선택되었다고 판단할 수 있습니다."
-    
     screen_file = capture_adb_screen_image()
     if not screen_file:
         return {"success": False, "answer": "Failed to capture screen."}
@@ -132,6 +138,11 @@ async def adb_screen_vlm(ctx: Context, question: str) -> dict:
     except Exception as e:
         return {"success": False, "answer": str(e)}
     
+# =========================================================
+# FastMCP Tool: analyze_log
+# - step, expected_result, 로그를 기반으로 성공 여부 판단
+# - LLM을 이용하여 JSON 형식 결과 반환
+# =========================================================
 @mcp.tool()
 def analyze_log(step: str, expected_result: str) -> dict:
     logs = get_log()
@@ -181,6 +192,11 @@ def analyze_log(step: str, expected_result: str) -> dict:
             "reason": f"Failed to parse model output as JSON. Raw output: {raw_output}"
         }
     
+# =========================================================
+# FastMCP Prompt: verify_prompt
+# - 주어진 step/expected_result를 분석하여 성공 여부 결정
+# - analyze_log + adb_screen_vlm 툴 사용
+# =========================================================
 @mcp.prompt()
 def verify_prompt(step: str, expected_result: str) -> list[base.Message]:
     system_content = f"""   
@@ -233,48 +249,9 @@ def verify_prompt(step: str, expected_result: str) -> list[base.Message]:
         base.UserMessage(f"Current Step: {step}\nExpected Result: {expected_result}\n"),
     ]
 
-@mcp.prompt()
-def analysis_prompt(step: str, 
-                            expected_result: str,
-                            action_type: str,
-                            canonical_name: str 
-                            ) -> list[base.Message]:
-    system_content = f"""
-당신은 소프트웨어 테스트 실패 원인을 분석하는 AI 전문가입니다.
-
-현재 테스트 단계에서 모든 검증 툴이 실패(fail)했습니다.
-다음 정보를 참고하여 실패 원인을 분석하세요.
-
-[필요 정보]
-- 수행된 step 내용: {step}
-- step 수행 후 expected result: {expected_result}
-- action_type: {action_type} (예: tap, hold 등)
-- step 실행을 위해 클릭한 UI 이름 : {canonical_name}
-
-[분석 목표]
-- 실패의 가능한 원인을 상세히 분석
-    - Action_mcp가 tool 호출 중 UI를 누락했을 가능성
-    - 클릭한 UI가 정상적으로 눌리지 않았을 가능성
-    - Hold 동작 시간 부족 등 action 관련 문제
-    - 기타 UI/환경 문제
-    - UI 매핑의 문제 (canonical name)
-- 현재 화면 정보를 바탕으로 재현 가능성 및 문제 원인을 추정
-
-[출력 형식]
-- 반드시 JSON으로 출력
-- 예시:
-{{
-    "failure_reason": "tap이 정상 수행되지 않음 / Hold 시간 부족 등 상세 설명",
-    "recommendation": "해결을 위해 어떤 조치를 취해야 하는지 간단 권장사항"
-}}
-"""
-    return [
-        base.AssistantMessage(system_content),
-        base.UserMessage(f"Current Step: {step}\nExpected Result: {expected_result}\nAction Type: {action_type}\nClicked UI Name: {canonical_name}"),
-    ]
-
+# =========================================================
+# 메인 실행
+# - FastMCP 서버 실행
+# =========================================================
 if __name__ == "__main__":
     mcp.run()
-    #question = "The 지정위치 이동 화면 (PresetMove) opens, showing designated position options."
-    #answer = query_screen_with_llm(Path("screen.png"), question)
-    #print(answer)

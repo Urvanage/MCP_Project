@@ -5,6 +5,12 @@ from collections import deque
 from datetime import datetime, timedelta
 
 class InMemoryLogMonitor:
+    """
+    In-memory Log Monitor
+    - adb logcat을 통해 안드로이드 디바이스 로그를 실시간으로 가져와 메모리 버퍼에 저장
+    - 최근 N분간의 로그만 유지
+    - 키워드 검색 및 특정 로그 저장 기능 제공
+    """
     def __init__(self, buffer_max_minutes=10):
         self.process = None
         self.thread = None
@@ -15,12 +21,13 @@ class InMemoryLogMonitor:
         self.current_year = datetime.now().year
         print("LogMonitor initialized (in-memory buffer mode).")
 
+    # 로그 모니터 시작 시간 설정
     def setTime(self):
         self.start_time = datetime.now()
         print(f"LogMonitor: start time set to {self.start_time}")
 
+    # adb logcat 실행 후 별도 스레드에서 로그를 메모리 버퍼에 저장
     def start_monitoring(self):
-        # adb logcat -c 생략 가능
         import subprocess
         self.process = subprocess.Popen(
             ["adb", "logcat", "-v", "time", "*:I"],
@@ -36,6 +43,7 @@ class InMemoryLogMonitor:
         self.thread.start()
         print("LogMonitor: Started log buffering in memory.")
 
+    # 별도 스레드에서 로그 읽기
     def _buffer_logs(self):
         try:
             for line in iter(self.process.stdout.readline, ''):
@@ -63,7 +71,7 @@ class InMemoryLogMonitor:
             self._running = False
             print("LogMonitor: Buffering stopped.")
 
-
+    # log_buffer에서 오래된 로그 제거
     def _clean_old_logs(self):
         now = datetime.now()
         threshold = now - timedelta(minutes=self.buffer_max_minutes)
@@ -74,6 +82,7 @@ class InMemoryLogMonitor:
             else:
                 break
 
+    # 로그 모니터 종료 및 스레드 정리
     def stop_monitoring(self):
         if self.process:
             self._running = False
@@ -81,10 +90,12 @@ class InMemoryLogMonitor:
             self.thread.join(timeout=5)
             print("LogMonitor: Monitoring stopped and cleaned up.")
 
+    # 현재 메모리 버퍼에 있는 로그 리스트 반환
     def get_logs(self) -> list[str]:
         self._clean_old_logs()
         return [line for _, line in self.log_buffer]
 
+    # 버퍼에서 특정 키워드 포함하는 가장 최근 로그 한 줄 검색
     def search(self, keyword: str) -> str | None:
         self._clean_old_logs()
         for _, line in reversed(self.log_buffer):
@@ -92,13 +103,13 @@ class InMemoryLogMonitor:
                 return line
         return None
     
+    # 특정 키워드 로그 추출한 후 log_info.txt에 저장
     def save_log(self):
         logs = []
         logs.append(self.search("[Msg]"))
         logs.append(self.search("Toast.Show"))
         logs.append(self.search("StartFragment :"))
         logs = [str(log) for log in logs if log is not None]
-        # print(f"==== [LOGMONITOR] ====\n{logs}")
 
         curr_dir = Path(__file__).parent
         resource_folder = curr_dir.parent / 'resource'
@@ -109,6 +120,5 @@ class InMemoryLogMonitor:
                 f.truncate(0)
                 for log_entry in logs:
                     f.write(log_entry + "\n")
-            #print(f"로그가 성공적으로 저장되었습니다.")
         except IOError as e:
             print(f"파일 작성 중 오류가 발생했습니다: {e}")

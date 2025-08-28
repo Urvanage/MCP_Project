@@ -316,17 +316,19 @@
     </div>
 
     <script>
+        // 페이지가 로드되면 초기화
         document.addEventListener('DOMContentLoaded', function() {
-            showSection('create-node-form');
-            setupNodeForm();
-            setupRelationForm();
-            setupDeleteForms();
-            setupUpdateForm();
-            refreshNodeList();
+            showSection('create-node-form'); // 기본적으로 노드 생성 폼 표시
+            setupNodeForm(); // 노드 생성 폼 이벤트 바인딩
+            setupRelationForm(); // 관계 생성 폼 이벤트 바인딩
+            setupDeleteForms(); // 노드/관계 삭제 폼 이벤트 바인딩
+            setupUpdateForm(); // 노드 속성 조회/수정 폼 이벤트 바인딩
+            refreshNodeList(); // 최신 노드 목록 가져오기
         });
 
-        let allNodes = {};
+        let allNodes = {}; // 서버에서 가져온 노드 목록 저장
 
+        // 특정 폼 섹션만 보이도록 처리
         function showSection(sectionId) {
             document.querySelectorAll('.form-section').forEach(section => {
                 section.style.display = 'none';
@@ -334,6 +336,7 @@
             document.getElementById(sectionId).style.display = 'block';
         }
 
+        // 서버에서 노드 목록 가져오기
         function refreshNodeList() {
             fetch('/get_nodes')
                 .then(response => response.json())
@@ -343,12 +346,14 @@
                 });
         }
         
+        // 노드 생성 폼 이벤트 처리
         function setupNodeForm() {
             const nodeForm = document.getElementById('nodeForm');
             const uielementProps = document.getElementById('uielement_props');
             const actionSubtypeContainer = document.getElementById('action_subtype_container');
             const nodeTypeRadios = document.querySelectorAll('input[name="node_type"]');
             
+            // 노드 타입 선택 시 폼 동적 표시
             nodeTypeRadios.forEach(radio => {
                 radio.addEventListener('change', (e) => {
                     uielementProps.style.display = 'none';
@@ -366,6 +371,7 @@
                 });
             });
             
+            // 커스텀 속성 추가 버튼
             const customPropsContainer = document.getElementById('custom_properties_container');
             document.getElementById('add_prop_btn').addEventListener('click', () => {
                 const propGroup = document.createElement('div');
@@ -376,14 +382,17 @@
                     <button type="button" class="btn btn-danger remove-prop-btn">-</button>
                 `;
                 customPropsContainer.appendChild(propGroup);
+                // 삭제 버튼 클릭 시 그룹 제거
                 propGroup.querySelector('.remove-prop-btn').addEventListener('click', () => {
                     propGroup.remove();
                 });
             });
 
+            // 노드 생성 폼 제출
             nodeForm.addEventListener('submit', function(e) {
                 e.preventDefault();
                 const formData = new FormData(nodeForm);
+                // 커스텀 속성 처리
                 const customProps = {};
                 document.querySelectorAll('.custom-prop-key').forEach((keyInput, index) => {
                     const valueInput = document.querySelectorAll('.custom-prop-value')[index];
@@ -392,7 +401,8 @@
                     }
                 });
                 formData.append('custom_properties', JSON.stringify(customProps));
-
+                
+                // 서버 요청
                 fetch('/create_node', { method: 'POST', body: formData })
                 .then(response => response.json())
                 .then(data => {
@@ -404,6 +414,7 @@
             });
         }
 
+        // 관계 생성 폼 이벤트 처리
         function setupRelationForm() {
             const relationForm = document.getElementById('relationForm');
             const sourceNameInput = document.getElementById('source_name');
@@ -412,6 +423,7 @@
             const actionSubtypeContainer = document.getElementById('relation_action_subtype_container');
             const actionSubtypeRadios = document.querySelectorAll('input[name="relation_action_subtype"]');
 
+            // 노드 타입 변화 시 자동완성 업데이트
             function updateRelationAutocomplete() {
                 const checkedRadio = document.querySelector('input[name="relation_type"]:checked');
                 if(!checkedRadio) return;
@@ -441,6 +453,7 @@
             
             updateRelationAutocomplete();
 
+            // 관계 생성 폼 제출
             relationForm.addEventListener('submit', function(e) {
                 e.preventDefault();
                 const formData = new FormData(relationForm);
@@ -579,6 +592,7 @@
             });
         }
 
+        // 노드 속성 조회 / 수정 폼
         function setupUpdateForm() {
             const getPropertiesBtn = document.getElementById('get_properties_btn');
             const updateNodeRadios = document.querySelectorAll('input[name="update_node_type"]');
@@ -591,6 +605,7 @@
             const newPropertiesContainer = document.getElementById('new_properties_container');
             const addNewPropBtn = document.getElementById('add_new_prop_btn');
 
+            // 자동완성 업데이트
             function updateUpdateFormAutocomplete() {
                 const checkedRadio = document.querySelector('input[name="update_node_type"]:checked');
                 if (!checkedRadio) return;
@@ -613,6 +628,7 @@
             updateActionSubtypeRadios.forEach(radio => radio.addEventListener('change', updateUpdateFormAutocomplete));
             updateUpdateFormAutocomplete();
 
+            // 기존 속성 가져오기
             getPropertiesBtn.addEventListener('click', function() {
                 const nodeName = updateNodeNameInput.value;
                 if (!nodeName) {
@@ -643,6 +659,7 @@
                 });
             });
 
+            // 속성 표시
             function displayProperties(properties) {
                 existingPropertiesContainer.innerHTML = '<h5>기존 속성</h5>';
                 for (const key in properties) {
@@ -655,6 +672,7 @@
                         ${isName ? '' : '<button type="button" class="btn btn-danger remove-prop-btn">삭제</button>'}
                     `;
                     existingPropertiesContainer.appendChild(propGroup);
+                    // 삭제/복원 버튼
                     if (!isName) {
                         propGroup.querySelector('.remove-prop-btn').addEventListener('click', function() {
                              if (propGroup.classList.toggle('bg-warning')) {
@@ -669,9 +687,11 @@
                         });
                     }
                 }
+                // 기존에 추가된 신규 속성 제거
                 newPropertiesContainer.querySelectorAll('.new-prop-group').forEach(el => el.remove());
             }
             
+            // 신규 속성 추가
             addNewPropBtn.addEventListener('click', () => {
                 const propGroup = document.createElement('div');
                 propGroup.className = 'input-group mb-2 new-prop-group';
@@ -686,6 +706,7 @@
                 });
             });
 
+            // 속성 업데이트 제출
             document.getElementById('propertiesUpdateForm').addEventListener('submit', function(e) {
                 e.preventDefault();
                 const newProps = {};
@@ -695,6 +716,7 @@
                     nodeType = document.querySelector('input[name="update_action_subtype"]:checked').value;
                 }
                 
+                // 기존 속성에서 삭제/수정
                 document.querySelectorAll('.existing-prop-group').forEach(group => {
                     const key = group.querySelector('.prop-key').value;
                     const value = group.querySelector('.prop-value').value;
@@ -705,6 +727,7 @@
                     }
                 });
 
+                // 신규 속성 추가
                 document.querySelectorAll('.new-prop-group').forEach(group => {
                     const key = group.querySelector('.new-prop-key').value.trim();
                     const value = group.querySelector('.new-prop-value').value.trim();
@@ -729,7 +752,7 @@
             });
         }
         
-        // 자동 완성 함수 (수정 없음)
+        // 자동 완성 함수
         function setupAutocomplete(input, dataProvider) {
             let currentFocus;
             input.addEventListener('input', function (e) {

@@ -2,16 +2,17 @@ import subprocess
 import time
 
 """
-생성된 sequence를 토대로 adb 커맨드를 실행한다.
-
-tap 함수를 통해서 호출한다.
-avoid 값은 dictionary 로 가장 시작점으로 설정된 UI Element를 의미한다.
+TapExecutor 클래스
+- 생성된 UI sequence를 기반으로 ADB 명령어를 실행하여 안드로이드 디바이스를 제어
+- tap()과 hold() 함수를 통해 호출
+- avoid 값은 dictionary 형태로, sequence의 시작점에서 클릭을 피할 UI Element를 지정
 """
 
 class TapExecutor:
     def __init__(self, avoid=None):
-        self.avoid = avoid
+        self.avoid = avoid # 클릭할 필요가 없는 UI Element 정보
 
+    # tap_sequence를 표준 형식 (list of dict)으로 변환
     def _normalize(self, tap_sequence):
         normalized = []
         
@@ -44,10 +45,12 @@ class TapExecutor:
 
         return normalized
     
+    # 화면 중앙 상단 영역을 탭
     def tap_middle(self):
         cmd = "adb shell input tap 810 50"
         subprocess.run(cmd, shell=True)
 
+    # 주어진 tap_sequence를 순서대로 탭한 후, 마지막으로 탭한 UI Element를 반환
     def tap(self, tap_sequence, avoid=None):
         tap_sequence = self._normalize(tap_sequence)
         last_tapped_item = None
@@ -83,6 +86,7 @@ class TapExecutor:
         
         return last_tapped_item
     
+    # tap과 동일하나 tap_sequence의 마지막 항목을 길게 누르는 동작
     def hold(self, tap_sequence, avoid=None):
         tap_sequence = self._normalize(tap_sequence)
         last_tapped_item = None

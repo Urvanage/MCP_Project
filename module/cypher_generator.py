@@ -6,17 +6,21 @@ from dotenv import load_dotenv
 import os
 
 """
-Canonical Mapper 에서 알아낸 UI element에 대해서 현재 화면 혹은 
-UI element에서부터 클릭하는 것들의 경로를 알아낼 수 있는 쿼리를 생성
+LLMCypherGenerator 모듈
+- Canonical Mapper에서 알아낸 UI element를 바탕으로
+  현재 화면 또는 UI element에서 클릭 경로를 찾기 위한
+  Neo4j Cypher 쿼리를 생성합니다.
 
-update_last_clicked_ui 사용 시 UI Element를 시작점으로 사용
-update_last_clicked_screen 사용 시 Screen을 시작점으로 사용
-generate 을 통해 호출
+- update_last_clicked_ui: UI Element를 시작점으로 사용
+- update_last_clicked_screen: Screen을 시작점으로 사용
+- generate: 최종 쿼리 생성
 """
 
+# .env 파일에서 환경변수 불러오기
 load_dotenv()
 api_key= os.getenv("OPENAI_API_KEY")
 
+# GPT-5 LLM 초기화
 llm = ChatOpenAI(
     model="gpt-5",
     use_responses_api=True,
@@ -30,6 +34,14 @@ llm = ChatOpenAI(
 
 
 class LLMCypherGenerator:
+    """
+    LLMCypherGenerator 클래스
+    - graph_path: 그래프 구조 텍스트 파일 경로
+    - model: LLM 객체
+    - initial_last_clicked_ui: 시작점으로 사용할 UIElement
+    - initial_screen: 시작점으로 사용할 Screen
+    """
+
     def __init__(self, graph_path, model=None, initial_last_clicked_ui=None, initial_screen=None):
         self.graph_path = graph_path
         self.llm = llm
@@ -39,6 +51,7 @@ class LLMCypherGenerator:
         self.current_screen = initial_screen
         self.isScreen = False
 
+    # LLM 프롬프트 템플릿 정의
     def _build_prompt_template(self):
         return """You are an expert in Neo4j Cypher query generation.
         
@@ -79,10 +92,12 @@ Only return this output format:
     def _load_text(self, path: str) -> str:
         return Path(path).read_text(encoding='utf-8')
 
+    # 마지막 클릭한 UI Element를 시작점으로 설정
     def update_last_clicked_ui(self, ui_element: dict | None):
         self.last_clicked_ui = ui_element['name']
         self.isScreen = False
 
+    # Screen을 시작점으로 설정
     def update_last_clicked_screen(self, screen_name):        
         self.current_screen = screen_name
         self.isScreen = True
@@ -91,6 +106,7 @@ Only return this output format:
     def generate(self, target_ui: str, previous_failed_queries=None) -> str:
         graph_structure = self._load_text(self.graph_path)
 
+        # 시작점 설정 및 노드 이름 결정
         current_screen = "Home"
         if self.current_screen != None:
             current_screen = self.current_screen
@@ -109,20 +125,21 @@ Only return this output format:
 
         print(f"generate() - current_screen: {self.current_screen}, isScreen: {self.isScreen}, last_clicked_ui: {self.last_clicked_ui}")
 
+        # LLM 프롬프트 context 구성하기
         context = {
             "graph_structure": graph_structure.strip(),
             "target_ui": target_ui.strip(),
-            #"current_screen": current_screen.strip()
             "start_point_description": start_point_description,
         }
 
-        # 이전 실패 쿼리를 context에 추가할 수도 있음
+        # 이전 실패 쿼리가 존재하면 context에 추가
         if previous_failed_queries:
             context["graph_structure"] += (
                 f"\n\nPrevious failed queries:\n" +
                 "\n".join(previous_failed_queries)
             )
         else:
+            # 기본 쿼리 생성 (LLM 사용하지 않음)
             start_node_label = "UIElement" if used_UIElement else "Screen"
 
             initialCypher = f"""
@@ -137,9 +154,11 @@ ORDER BY apoc.coll.indexOf(nodes(path), n)
 """
             return initialCypher
 
+        # LLM 호출
         chain = self.prompt_template | self.llm
         response = chain.invoke(context)
 
+        # LLM 응답에서 필요한 내용 추출
         if isinstance(response, dict) and "messages" in response:
             messages = response["messages"]
             if isinstance(messages, list):

@@ -3,6 +3,5 @@ __pycache__
 check/
 notNow/
 adb_commands.txt
-requirements.txt
-robot_control.py
 screen.png
+.venv/

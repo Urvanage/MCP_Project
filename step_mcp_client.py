@@ -18,16 +18,26 @@ from module.step_executor import StepExecutor
 import csv
 from collections import OrderedDict
 
+# =========================================================
+# 개발 모드 플래그
+# True이면 사용자 피드백 루프 활성화
+# =========================================================
 DEV_MODE = True
 
+# FAISS Embeddings 초기화
 embeddings = OpenAIEmbeddings()
 faiss_vectorstore=None
 
+# .env에서 환경변수 로드
 load_dotenv()
 
 os.getenv("OPENAI_API_KEY")
 model = ChatOpenAI(model="gpt-4o")
 
+# =========================================================
+# CSV 파일에서 테스트 케이스 읽어오기 함수
+# - (test_screen, user_input) 형태의 리스트 반환
+# =========================================================
 def testCases_from_csv(file_path):
     test_cases = OrderedDict()
 
@@ -55,11 +65,13 @@ def testCases_from_csv(file_path):
 
     return list(test_cases.keys())
 
+# Step MCP 서버 파라미터 정의
 server_params = StdioServerParameters(
     command="python",
     args=["./step_mcp.py"],
 )
 
+# FAISS 벡터스토어 초기화 (로컬 index 존재 시 로드)
 async def initialize_faiss():
     global faiss_vectorstore
     global embeddings
@@ -73,6 +85,7 @@ async def initialize_faiss():
             allow_dangerous_deserialization=True
         )
 
+# FAISS 저장 함수
 async def save_faiss():
     global faiss_vectorstore
     if faiss_vectorstore:
@@ -80,10 +93,14 @@ async def save_faiss():
         faiss_vectorstore.save_local(faiss_index_path)
         print(f"FAISS Vectorstore를 저장했습니다.")
 
+# =========================================================
+# 사용자 피드백 루프
+# - LLM이 생성한 Step 리스트를 사용자에게 보여주고 수정 가능
+# - 수정된 Step은 FAISS에 문서로 저장
+# =========================================================
 async def feedback_loop(user_input, steps: list[dict], agent) -> list[dict]:
     print("\n Generated Steps:")
     for i, step in enumerate(steps, 1):
-        #print(f"{i}. ({step['action']}) {step['description']}")
         print(f"{i}. {step['description']}")
 
     feedback = input("\n 이 Step으로 테스트 수행하겠습니까? (Enter = OK / 피드백 입력): ").strip()
@@ -143,24 +160,27 @@ Renegerate a concise and improved list of steps in JSON format.
         print(content)
         return steps
 
+# 화면 이름 변경 함수
 def change_screen_name(test_screen: str) -> str:
     if test_screen == "초기화면":
         return "Home"
-    elif test_screen == "이동":
+    elif "이동" in test_screen:
         return "Move"
     elif "설정" in test_screen:
         return "Settings"
     elif "시스템" in test_screen:
         return "System"
-    elif test_screen == "프로그램":
+    elif "프로그램" in test_screen:
         return "Program"
-    elif test_screen == "실행":
+    elif "실행" in test_screen:
         return "Run"
 
+# JSON 문자열에서 마지막 쉼표 제거
 def remove_trailing_commas(json_str: str) -> str:
     json_str = re.sub(r',\s*([\]}])', r'\1', json_str)
     return json_str
 
+# StepExecutor로 Steps 실행
 async def execute_steps(steps: list, step_executor: StepExecutor, test_screen: str):
     """주어진 steps 리스트를 순차적으로 실행하고, 원래 화면으로 복귀합니다."""
     step_executor.resetState()
@@ -168,11 +188,11 @@ async def execute_steps(steps: list, step_executor: StepExecutor, test_screen: s
         action = step.get("action","").strip()
         desc = step.get("description", "").strip()
         expected_result = step.get("expected_result","").strip()
-        # step_text = f"{i}. ({action}) {desc}"
         step_text = f"{i}. {desc}"
 
         await step_executor.run_step(step_text, expected_result)
 
+# LLM 응답에서 Steps 추출
 def parse_steps_from_response(content: str) -> list | None:
     """LLM 응답 content에서 steps 리스트를 추출하고 파싱합니다."""
     json_str = None
@@ -223,7 +243,7 @@ def parse_steps_from_response(content: str) -> list | None:
     print("==== 추출 시도한 JSON 문자열 ====\n", json_str)
     return None
 
-
+# 메인 실행 함수
 async def run():
     await initialize_faiss()
 
@@ -246,6 +266,7 @@ async def run():
             #    test_screen, user_input = testList[i]
             ########################################################
             
+            # 현재 화면 확인
             start_point = ScreenChecker().check_current_screen()
             if start_point == "fail":
                 ScreenChecker().move_to_home()
@@ -253,6 +274,7 @@ async def run():
             
             user_input += f"현재 화면은 {start_point}입니다."
             
+            # MCP Prompt 생성 및 LLM 호출
             prompts = await load_mcp_prompt(
                 session, "default_prompt", arguments={"message": user_input}
             )
@@ -261,25 +283,32 @@ async def run():
             print("====RESPONSE====")
             content = response["messages"][-1].content.strip()
 
+            # LLM 응답에서 Steps 추출
             steps = parse_steps_from_response(content)
 
+            # 로그 모니터 시작
             log_monitor = InMemoryLogMonitor()
             log_monitor.start_monitoring()
 
             if steps:
+                # 개발 모드에서는 사용자 피드백 루프 실행
                 if DEV_MODE:
                     steps = await feedback_loop(user_input, steps, agent)
 
+                # StepExecutor 생성
                 test_screen = change_screen_name(input_list[0])
                 stepExecutor = StepExecutor(monitor=log_monitor, user_input=user_input)
                 stepExecutor.setStartScreen(start_point)
 
+                # 현재 화면과 테스트 화면이 다르면 Step0 생성
                 if start_point != test_screen:
                     stepExecutor.generate_step0(start_point, test_screen)
                     stepExecutor.setStartScreen(test_screen)
 
+                # Steps 실행
                 await execute_steps(steps, stepExecutor, test_screen)
                 
+                # 실행 결과 출력
                 final_Result = stepExecutor.get_finalResult()
                 stepExecutor.return_to_testScreen(test_screen)
 
@@ -290,6 +319,7 @@ async def run():
                 else:
                     print("[ERROR] Error occurred during executing step")
 
+            # 로그 모니터 종료
             log_monitor.stop_monitoring()
 
     await save_faiss()

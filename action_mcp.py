@@ -1,39 +1,35 @@
-import json
 from dataclasses import dataclass
 from mcp.server.fastmcp import FastMCP
 from mcp.server.fastmcp.prompts import base
 from dotenv import load_dotenv
-import openai
 import os
-from typing import List
-from langchain_openai import OpenAIEmbeddings
-from langchain_community.vectorstores import FAISS
-import pandas as pd
-import csv
-from collections import defaultdict
 from neo4j import GraphDatabase, AsyncGraphDatabase
 import subprocess
 import time
-import pytesseract
-from PIL import Image
-import cv2
-
 import logging
 
+# 환경 변수 로드
 load_dotenv()
 
 uri = os.getenv("NEO4J_URI")
 user= os.getenv("NEO4J_USER")
 password=os.getenv("NEO4J_PASSWORD")
 
+# 로그 설정
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+# =========================================================
 # FastMCP 서버 초기화
+# =========================================================
 mcp = FastMCP("Neo4j 기반 UI Agent", instructions="""You are an intelligent agent designed to automate UI interaction of a mobile app.
     Use the Neo4j graph database to find UI elements and their relationships.
     Perform taps via adb and use OCR to read text when needed.
     Decide and explain your actions step by step.""")
 
+# =========================================================
+# FastMCP Tool 정의: find_contained_elements
+# Neo4j에서 특정 화면이 포함하는 UIElement와 트리거되는 액션 정보를 조회
+# =========================================================
 @mcp.tool()
 def find_contained_elements(screen: str):
     """Retrieve UIElements which Screen contains"""
@@ -67,7 +63,9 @@ def find_contained_elements(screen: str):
     finally:
         driver.close()
 
-
+# =========================================================
+# 로그 기록 함수
+# =========================================================
 def _log_to_file(message: str, filename: str = 'adb_commands.txt'):
     try:
         with open(filename, 'a', encoding='utf-8') as f:
@@ -75,6 +73,10 @@ def _log_to_file(message: str, filename: str = 'adb_commands.txt'):
     except Exception as e:
         print(f"Error writing to log file {filename}: {e}")
 
+# =========================================================
+# FastMCP Tool 정의: click_ui
+# adb를 사용하여 지정 UI 좌표를 클릭
+# =========================================================
 @mcp.tool()
 def click_ui(info):
     """Click the chosen UI element using adb"""
@@ -104,6 +106,10 @@ def click_ui(info):
         _log_to_file(f"[ERROR] {error_message}")
         return error_message
 
+# =========================================================
+# FastMCP Tool 정의: screen_description
+# Neo4j에서 화면 설명/추가 지침을 비동기로 조회
+# =========================================================
 @mcp.tool()
 async def screen_description(screen: str) -> str: # 반환 타입을 str로 명시
     """
@@ -142,6 +148,10 @@ async def screen_description(screen: str) -> str: # 반환 타입을 str로 명�
     finally:
         await driver.close()
 
+# =========================================================
+# FastMCP Prompt 정의: action_data_checker
+# 주어진 액션에 대해 사용자 입력이 더 필요한지 판단
+# =========================================================
 @mcp.prompt()
 def action_data_checker(screen_name: str, user_goal: str):
     return [
@@ -156,41 +166,10 @@ def action_data_checker(screen_name: str, user_goal: str):
         )
     ]
 
-# action_mcp.py
-
-@mcp.prompt()
-def prompt_before(screen_name: str, user_goal: str) -> list[base.Message]:
-    system_content = f"""You are a step-by-step guide generator. Tell me what can you do if you are now in {screen_name} screen
-You are an intelligent UI automation agent interacting with a mobile app.
-You use a Neo4j graph database to query current screens and UI elements. 
-You can perform taps via adb, and read text on screen using OCR when needed. 
-
-Given the current screen name, your task is to decide the next step(s) to achieve the user's goal. 
-
-You have access to the following tools:
-- find_contained_elements(screen): Returns UI elements and their actions on the given screen.
-- click_ui(info): Tap on a UI element given its name and coordinates.
-- find_and_follow_action(action): Find the next screen after performing an action.
-- check_screen_type(screen): Check if the screen requires OCR and get bounding box if so.
-- screen_description(screen): Retrieves the specific description or initial instructions for a given screen from the Neo4j graph database.
-- perform_ocr(region): Perform OCR on a specified region.
-
-Instructions:
-- If IP address input is required, the IP address string provided in the user goal should be mapped to the corresponding numeric and dot (.) keys and clicked in order.
-- Never convert segments like `0.74` to `074`, and never drop the dots.
-- Never convert segments like `0.89` to `089`, never drop the dots in any other IP addresses.
-- First, **ALWAYS START by calling `screen_description` with the current screen name** to get any additional instructions or context for the current screen.
-- Then, use `find_contained_elements` to get available UI elements and their actions on the current screen.
-- Finally, based on the user's goal, choose the most appropriate UI element and use `click_ui` to tap it.
-- Describe each step clearly and decide next steps until the goal is reached.
-    """
-    return [
-        base.AssistantMessage(system_content),
-        base.UserMessage(user_goal),
-    ]
-
-
-
+# =========================================================
+# FastMCP Prompt 정의: default_prompt
+# 단일 단계 UI 액션을 결정
+# =========================================================
 @mcp.prompt()
 def default_prompt(screen_name: str, user_goal: str) -> list[base.Message]:
     system_content = f"""You are a step-by-step UI automation agent interacting with a mobile app.
@@ -221,6 +200,10 @@ Instructions:
         base.UserMessage(f"Current Screen: {screen_name}\nUser Goal: {user_goal}"),
     ]
 
+# =========================================================
+# MCP 서버 건강 체크
+# 10초마다 서버 작동 로그 기록
+# =========================================================
 import threading
 import datetime
 
@@ -228,10 +211,13 @@ def mcp_health_check():
     _log_to_file(f"[HealthCheck] MCP Server is alive at {datetime.datetime.now()}")
     threading.Timer(10.0, mcp_health_check).start()
 
+# =========================================================
+# 메인: MCP 서버 실행
+# =========================================================
 if __name__ == "__main__":
     try:
         _log_to_file("Action MCP Server started")
-        mcp_health_check()
-        mcp.run()
+        mcp_health_check() # 서버 상태 주기적 확인
+        mcp.run() # FastMCP 서버 실행
     except Exception as e:
         _log_to_file(f"MCP Server Shut down. Reason: {e}")

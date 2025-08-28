@@ -1,45 +1,23 @@
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
-
 from langchain_mcp_adapters.tools import load_mcp_tools
 from langchain_mcp_adapters.prompts import load_mcp_prompt
 from langgraph.prebuilt import create_react_agent
 from langchain_openai import ChatOpenAI
 import json
 import re
-
-from langchain_core.runnables import Runnable
-from langchain_core.runnables.config import RunnableConfig
-
 from dotenv import load_dotenv
 import os
-
 import asyncio
 
-from uuid import uuid4
-from langchain_core.messages import AIMessage
-from langchain_core.runnables import RunnableConfig
-from typing import Any
-
+# 환경 변수 로드
 load_dotenv()
 openAPI = os.getenv("OPENAI_API_KEY")
 
-"""
-llm = ChatOpenAI(
-    model="gpt-5",
-    use_responses_api=True,
-    output_version="responses/v1",
-    extra_body={
-        "text":{"verbosity":"low"},
-        "reasoning": {"effort": "low"},
-    },
-    api_key = openAPI
-)
-model = TextLLM(llm)
-"""
-
+# LLM 모델 초기화
 model = ChatOpenAI(model="gpt-4o")
 
+# MCP 서버 실행 파라미터 정의
 server_params = StdioServerParameters(
     command="python",
     args=["./action_mcp.py"],
@@ -49,6 +27,10 @@ server_params = StdioServerParameters(
 
 import asyncio
 
+# =========================================================
+# 비동기 함수: run_action_agent
+# - 화면(screen_name)과 목표(user_goal)를 받아 MCP 에이전트를 통해 자동 행동 수행
+# =========================================================
 async def run_action_agent(screen_name: str, user_goal: str):
     print("[Client] Starting run_action_agent...")
     async with stdio_client(server_params) as (read, write):
@@ -60,6 +42,7 @@ async def run_action_agent(screen_name: str, user_goal: str):
             need_more_info = False
             user_question = None
 
+            # Action 데이터 확인 후, 주어진 화면과 목표에 대해 추가 정보 필요 여부 판단
             action_data_check_prompt = await load_mcp_prompt(
                 session, "action_data_checker",
                 arguments={
@@ -71,9 +54,6 @@ async def run_action_agent(screen_name: str, user_goal: str):
             try:
                 check_response = await asyncio.wait_for(agent.ainvoke({"messages": action_data_check_prompt}), timeout=60)
                 check_content = check_response["messages"][-1].content.strip()
-                #check_ai_msg = check_response["messages"][-1]
-                #check_content = _text_or_raw(check_ai_msg.content)  # 문자열로 변환
-                #match = re.search(r"\{.*?\}", check_content)
                 match = re.search(r"\{.*?\}", check_content)
                 
                 if match:
@@ -148,7 +128,6 @@ async def run_action_agent(screen_name: str, user_goal: str):
                     for message in reversed(response['messages']):
                         if hasattr(message, 'name') and message.name == 'click_ui':
                             last_tool_message_content = message.content
-                            #last_tool_message_content = message
                             start_index = last_tool_message_content.find("Tapping ") + len("Tapping ")
                             end_index = last_tool_message_content.find(" at (")
                             if start_index != -1 and end_index != -1:
@@ -179,6 +158,3 @@ async def run_action_agent(screen_name: str, user_goal: str):
             
             print("[Client] run_action_agent finished.")
             return current_ui_name_tapped # 마지막으로 탭한 UI 요소를 반환
-        
-
-# asyncio.run(run_action_agent("IPInputKeyboard", "Enter '192.168.0.89' in the IP input field."))
