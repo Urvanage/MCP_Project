@@ -2,6 +2,47 @@
 
 Conty AI Agent는 Conty 애플리케이션의 테스트와 자동화를 지원하는 AI 기반 에이전트입니다. 자연어 명령을 이해해 테스트 시나리오를 자동 생성하고, 단계별 실행과 시각적 검증까지 제공합니다.
 
+# Conty AI Agent
+
+## Overview (English)
+
+Conty AI Agent is an AI-based test automation system designed to execute and validate test scenarios for the Conty mobile application.
+
+The system interprets natural language test instructions, retrieves relevant information from embedded test manuals, and converts them into executable test steps. It interacts with the Android application through ADB, performs UI actions, and verifies the resulting UI state using visual analysis.
+
+To model application navigation, UI screens and elements are represented as a graph in Neo4j, enabling structured traversal of UI transitions during testing. The agent uses a retrieval-augmented approach with FAISS to provide relevant context from test documentation when generating test steps.
+
+This project was developed to explore how AI agents can assist in software release validation by combining natural language processing, UI automation, and structured system modeling.
+
+---
+
+## Key Features
+
+- **Natural Language Test Execution**  
+  Generates and executes test steps from high-level natural language test instructions.
+
+- **UI Automation via ADB**  
+  Controls the Android application by interacting with UI elements through ADB.
+
+- **Visual Verification**  
+  Captures screenshots after each step and analyzes them to verify whether the expected UI state has been reached.
+
+- **Manual-based Retrieval (RAG)**  
+  Test manuals are embedded into a vector store (FAISS) so that the agent can retrieve relevant information when generating test steps.
+
+- **Graph-based UI Modeling**  
+  Application screens and UI elements are represented as nodes and transitions in a Neo4j graph database to model UI navigation paths.
+
+---
+
+## Tech Stack
+
+- Python
+- Neo4j (Graph Database)
+- FAISS (Vector Search for RAG)
+- ADB (Android Debug Bridge)
+- OpenAI API
+
 ---
 
 ## 주요 기능
